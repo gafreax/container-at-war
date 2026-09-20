@@ -21,7 +21,7 @@ SPEAKER NOTES — LEGENDA
 - DEMO = esecuzione live SOLO su Docker (docker-compose). Kubernetes viene NOMINATO/MOSTRATO, non eseguito.
 - CODE = commento al codice live (non live-coding: il codice è già a schermo).
 - Tesi ricorrente da ripetere 3-4 volte: «Più sicuro» non vuol dire «sicuro».
-- Budget totale ~40 min. I minuti indicati sono cumulativi indicativi.
+- Budget totale ~43 min. I minuti indicati sono cumulativi indicativi.
 - REGOLA: tieni pronto un video di backup di ogni DEMO. Se si rompe, mandi il video e vai avanti.
 -->
 
@@ -112,7 +112,7 @@ Verifichiamolo. Con il codice, non con gli slogan.
 fastify.get('/attack/command-injection', (req, reply) => {
   const ip = req.query.ip || '8.8.8.8';
   exec(`ping -c 1 ${ip}`, (err, stdout) => {   // <-- exec = /bin/sh -c
-    return reply.send(err ? `[BLOCCATO] ${err.message}` : stdout);
+    return reply.send(err ? `[FAILED] ${err.message}` : stdout);
   });
 });
 ```
@@ -132,19 +132,19 @@ Payload che mostreremo: ip = 8.8.8.8; ls -la  → su immagine classica esegue an
 <span class="tag">DEMO Docker</span>
 
 ```bash
-# Immagine Node CLASSICA (porta 6661)
-curl "localhost:6661/attack/command-injection?ip=8.8.8.8;%20ls%20-la"
-#  -> funziona: eseguo comandi arbitrari
+./tests/test-node.sh app-classic cmdi
+#  -> RED   [ATTACK SUCCEEDED]  comando arbitrario eseguito, uid=0(root)
 
-# Immagine DISTROLESS (porta 6662)
-curl "localhost:6662/attack/command-injection?ip=8.8.8.8;%20ls%20-la"
-#  -> spawn /bin/sh ENOENT   (niente shell!)
+./tests/test-node.sh app-distroless cmdi
+#  -> GREEN [ATTACK BLOCKED]    spawn /bin/sh ENOENT (niente shell!)
 ```
 
 <!--
 [6:00 → 8:00] DEMO su Docker (docker-compose up già avviato prima del talk).
-1. Lancia contro 6661 (classica): mostra l'output di ls, "ho l'esecuzione".
-2. Lancia contro 6662 (distroless): ENOENT.
+Uso lo script colorato, non curl a mano: ./tests/test-node.sh <target> <attacco>.
+Il colore lo decide lo script dallo status HTTP: RED = attacco riuscito, GREEN = bloccato.
+1. Lancia contro app-classic (6661): banner ROSSO, il comando iniettato (id) gira, nota uid=0(root).
+2. Lancia contro app-distroless (6662): banner VERDE, [FAILED] spawn /bin/sh ENOENT.
 Battuta: "Distroless 1 - Attaccante 0. Vittoria! ... Fine del talk? Grazie a tutti?"
 Pausa comica, poi: "No. Perché ho appena barato con voi."
 -->
@@ -217,10 +217,11 @@ Prepara il pubblico all'easter egg.
 <span class="tag">DEMO Docker</span>
 
 ```bash
-curl "localhost:6662/attack/path-traversal?file=../../../../etc/passwd"
+./tests/test-node.sh app-distroless passwd
 ```
 
 ```
+[ATTACK SUCCEEDED - HTTP 200]                       🔴
 root:x:0:0:root:/root:/bin/bash
 ...
 darth_vader:x:66:66:Sith Lord:/death_star:/bin/force_choke
@@ -228,7 +229,7 @@ neo:x:101:101:The One:/matrix:/bin/fly
 ```
 
 <!--
-[12:30 → 14:00] DEMO su Docker (distroless, porta 6662).
+[12:30 → 14:00] DEMO su Docker (distroless, porta 6662). Comando: ./tests/test-node.sh app-distroless passwd.
 Lascia che il pubblico legga l'easter egg. Momento leggero: "Sul mio server gira anche Darth Vader, shell /bin/force_choke."
 Poi serio: "Ok, ho letto /etc/passwd. Chi se ne frega. Ora alziamo la posta."
 -->
@@ -240,8 +241,11 @@ Poi serio: "Ok, ho letto /etc/passwd. Chi se ne frega. Ora alziamo la posta."
 <span class="tag">DEMO Docker</span>
 
 ```bash
-curl "localhost:6662/attack/path-traversal?file=\
-../../var/run/secrets/kubernetes.io/serviceaccount/token"
+./tests/test-node.sh app-distroless token
+```
+```
+[ATTACK SUCCEEDED - HTTP 200]                       🔴
+eyJhbGciOiJSUzI1NiIsImtpZCI6...
 ```
 
 Service Account Token → **movimento laterale nel cluster**.
@@ -250,7 +254,7 @@ Nessuna shell. Solo `fs.readFileSync`.
 <span class="small">(Token FINTO montato per la demo — meccanismo reale, valore innocuo.)</span>
 
 <!--
-[14:00 → 15:30] DEMO.
+[14:00 → 15:30] DEMO. Comando: ./tests/test-node.sh app-distroless token.
 Mostra il JWT, decodificalo su jwt.io (assicurati sia il token FINTO valido, non quello malformato del repo).
 Spiega il blast radius: "Con un token di service account permissivo, da qui parlo con l'API server del cluster.
 Da un bug in UNA app, potenzialmente muovo su tutto il namespace."
@@ -291,7 +295,7 @@ Aggancio: "Quindi il managed mi salva? Ci arriviamo tra poco. Prima, il colpo di
 // endpoint /attack/eval-rce
 fastify.get('/attack/eval-rce', (req, reply) => {
   const result = eval(req.query.code);   // <-- esecuzione arbitraria JS
-  return reply.send(`Risultato: ${result}`);
+  return reply.send(`RCE result: ${result}`);
 });
 ```
 
@@ -312,19 +316,23 @@ senza mai toccare /bin/sh."
 <span class="tag">DEMO Docker</span>
 
 ```bash
-# leggo il token direttamente da codice JS, dentro Node
-curl "localhost:6662/attack/eval-rce?code=\
-require('fs').readFileSync('/var/run/secrets/kubernetes.io/\
-serviceaccount/token','utf8')"
+./tests/test-node.sh app-distroless eval
+```
+```
+[ATTACK SUCCEEDED - HTTP 200]                       🔴
+RCE result: 2
 ```
 
+Payload dello script: `code=1+1` — banale apposta, per essere ripetibile sul palco.
+Ma è la STESSA strada di `require('fs').readFileSync(token)`.
 RCE reale su **distroless**. Zero shell coinvolte.
 
 <!--
-[18:00 → 19:30] DEMO (distroless).
+[18:00 → 19:30] DEMO (distroless). Comando: ./tests/test-node.sh app-distroless eval.
 Questa è la demo RCE più solida: dipende solo dal runtime Node, non dal kernel della VM.
-Mostra che eseguo codice arbitrario. Takeaway forte:
-"Distroless toglie la SHELL. Non toglie il RUNTIME. E il runtime, per un interprete, è tutto ciò che serve."
+Lo script manda un payload innocuo (1+1) per essere sicuro e ripetibile live, ma sottolinea a voce:
+"eval esegue QUALSIASI JS. Lo stesso `eval` potrebbe fare require('fs').readFileSync sul token che avete visto prima."
+Takeaway forte: "Distroless toglie la SHELL. Non toglie il RUNTIME. E il runtime, per un interprete, è tutto ciò che serve."
 Ripeti la tesi: «Più sicuro» non vuol dire «sicuro».
 -->
 
@@ -395,17 +403,77 @@ deny /etc/shadow mrw,
 deny /var/run/secrets/kubernetes.io/serviceaccount/** mrw,
 ```
 
+```bash
+./tests/test-node.sh app-distroless-hardened passwd token
+```
+```
+[ATTACK BLOCKED - HTTP 500]                         🟢
+Read error: EACCES
+```
+
 <span class="tag">DEMO Docker</span> Ritento l'LFI sul container *hardened* → **EACCES** 🎉
 
-<span class="small">Nota onesta: qui uso una blacklist per didattica. In produzione → allowlist.</span>
+<span class="small">Nota onesta: qui uso una blacklist per didattica. In produzione → allowlist (vedi slide dopo).</span>
 
 <!--
 [24:00 → 26:00] DEMO su Docker (container app-distroless-hardened, porta 6663, con security_opt apparmor).
-Rilancia lo stesso curl LFI di prima contro 6663: fallisce con permission denied.
-"Il kernel dell'host ha intercettato la readFileSync di Node PRIMA che leggesse il file."
-Onestà: "Sto usando una blacklist — 'nega questi file'. È fragile: dimentichi un file e sei fregato.
-In produzione si fa il contrario: allowlist, nego tutto tranne ciò che serve. È proprio il tema del talk: andare a fondo."
+Comando: ./tests/test-node.sh app-distroless-hardened passwd token — rilancia le stesse due LFI di prima, ora contro 6663.
+Entrambe tornano VERDI: "Read error: EACCES". "Il kernel dell'host ha intercettato la readFileSync di Node PRIMA che leggesse il file."
+Onestà: "Sto usando una blacklist — 'nega questi file'. È fragile: dimentichi un file e sei fregato. Tra un attimo vi mostro esattamente cosa succede quando dimentichi."
 K8s: "Su Kubernetes stesso profilo, via securityContext.appArmorProfile (da 1.30)." — mostra riga, non eseguire.
+-->
+
+---
+
+## AppArmor — il buco della blacklist
+
+<span class="tag">DEMO Docker</span>
+
+```bash
+./tests/test-node.sh app-distroless-hardened conf
+```
+```
+[ATTACK SUCCEEDED - HTTP 200]                       🔴
+```
+
+Stesso LFI, file diverso: `/etc/come-to-code.conf`.
+La blacklist **non lo conosce** → nessun `deny`, nessun EACCES.
+
+> Una blacklist protegge solo ciò che **ricordi** di vietare.
+> Corretto: **allowlist / default-deny** — nega tutto, permetti solo il minimo.
+
+<!--
+[26:00 → 27:00] DEMO su Docker (stesso container hardened, porta 6663).
+Comando: ./tests/test-node.sh app-distroless-hardened conf.
+Rilancio lo stesso attacco LFI ma su un file diverso: /etc/come-to-code.conf. Torna ROSSO.
+"Guardate il profilo: ho scritto deny su /etc/passwd, /etc/shadow, sul token — ma NON su questo file. Il kernel non lo blocca perché non gli ho mai detto di farlo."
+"Questo è il problema strutturale delle blacklist: proteggono solo quello che il difensore ha pensato di vietare.
+L'attaccante deve trovare UNA cosa che hai dimenticato; tu devi ricordarti TUTTO."
+"In produzione la via corretta è l'opposto: allowlist, default-deny. Nego tutto, permetto esplicitamente solo il minimo che l'app usa davvero.
+Qui in demo uso la blacklist perché si legge in 3 righe e si capisce subito il meccanismo sul palco — ma sappiate che in produzione è l'approccio sbagliato."
+(Nota: il layer sbagliato per `eval` lo vediamo più avanti, come gancio finale prima di Argus.)
+-->
+
+---
+
+## Scrivere l'allowlist: chiedilo (bene) all'AI
+
+- Un profilo AppArmor/Seccomp **allowlist** = ore su documentazione e Stack Overflow
+- Oggi puoi farti **abbozzare** il profilo da un'AI, dal comportamento reale dell'app
+- Resta **un punto di partenza**: va letto, capito, testato — **mai** incollato alla cieca
+
+> Copiare una risposta Stack Overflow del 2013, 3 upvote, e sperare **non è** una strategia.
+> Un profilo sbagliato-ma-sicuro-di-sé è **peggio** di nessun profilo.
+
+<!--
+[27:00 → 28:00]
+"Scrivere un allowlist AppArmor o un profilo Seccomp buono, a mano, richiede ore: bisogna sapere ESATTAMENTE quali file,
+quali syscall, quali path usa davvero la tua app in produzione. Per anni questo ha significato documentazione scarna,
+o la classica risposta Stack Overflow del 2013 con tre upvote, copiaincollata pregando che funzioni."
+"Oggi puoi usare l'AI per abbozzare un allowlist partendo dal comportamento osservato dell'app — un acceleratore enorme."
+"MA — e qui torna il tema di tutto il talk — un profilo generato dall'AI va SEMPRE verificato da un umano prima della produzione.
+Un'AI che ti scrive un allowlist sbagliato con grande sicurezza è peggio di nessun allowlist: dà un falso senso di protezione.
+Man-in-the-loop, sempre. È esattamente la stessa filosofia che vedremo tra poco con Argus."
 -->
 
 ---
@@ -418,7 +486,7 @@ K8s: "Su Kubernetes stesso profilo, via securityContext.appArmorProfile (da 1.30
 > Ogni feature difende da **una** minaccia. Non da *tutte*.
 
 <!--
-[26:00 → 27:00]
+[28:00 → 29:00]
 Punto sottile ma potente: molte 'checkbox di sicurezza' difendono da minacce specifiche.
 "Read-only non ferma una lettura. Non-root non ferma la lettura di un file leggibile da tutti.
 Non sono inutili — difendono da ALTRO. Ma metterle in check e sentirsi al sicuro è di nuovo la trappola."
@@ -439,10 +507,11 @@ Uccide il fileless Go alla radice. Su K8s: `securityContext.seccompProfile`.
 <span class="small">Caveat: profilo troppo aggressivo = app legittima rotta. Trade-off reale.</span>
 
 <!--
-[27:00 → 28:30] CODE — commento al profilo (nessun live).
+[29:00 → 30:30] CODE — commento al profilo (nessun live).
 "Seccomp filtra le chiamate al kernel. Blocco memfd_create ed execve → l'attacco Go fileless muore.
 MA: alcune librerie usano memfd_create per cose legittime. Un profilo troppo stretto rompe app vere.
 Questo è IL messaggio: la sicurezza è fatta di trade-off, non di interruttori on/off."
+Anticipo (senza svelare tutto): "Notate che Seccomp filtra le SYSCALL, non l'interprete. Tenetelo a mente: torna utile più avanti con eval."
 -->
 
 ---
@@ -457,7 +526,7 @@ Il tuo **bug applicativo (LFI/RCE) resta tuo.** Vive nell'anello *Code*.
 - **Workload Identity** + token a vita breve → riduce il blast radius del furto token
 
 <!--
-[28:30 → 31:00] La seconda buzzword smontata.
+[30:30 → 33:00] La seconda buzzword smontata.
 "'Managed' è forse la parola più fraintesa. Google patcha il kernel, ruota i certificati, protegge l'API server.
 Fa un lavoro enorme. Ma NON scrive il tuo codice. L'LFI che avete visto gira identico su GKE.
 Il modello si chiama 'shared responsibility': loro l'infrastruttura, TU il workload."
@@ -478,7 +547,7 @@ Non puoi auditare l'**intero albero** delle dipendenze.
 Backdoor inserita a monte, in una libreria di compressione, da un manutentore "fidato".
 
 <!--
-[31:00 → 33:30] La terza buzzword.
+[33:00 → 35:30] La terza buzzword.
 "'Fastify è più sicuro di Express' — magari è vero, ma è un'opinione, non un threat model.
 Il problema vero: la tua app tira dentro centinaia di dipendenze transitive. Non le leggi tutte.
 Nel 2024 xz — una libreria di compressione ovunque — è stata backdoorata da un manutentore che si era
@@ -498,8 +567,40 @@ Distroless + AppArmor + Seccomp + RBAC + token effimeri = **anelli**.
 Nessuno basta da solo. Insieme = **defense in depth**.
 
 <!--
-[33:30 → 34:30]
+[35:30 → 36:30]
 Sintesi della difesa in profondità. "Non è UNA cosa. È stratificare, sapendo che ogni strato può cedere."
+-->
+
+---
+
+## Il gancio che resta aperto: `eval`
+
+<span class="tag">DEMO Docker</span>
+
+```bash
+./tests/test-node.sh app-distroless-hardened eval
+```
+```
+[ATTACK SUCCEEDED - HTTP 200]                       🔴
+RCE result: 2
+```
+
+- AppArmor guarda i **file**, non l'interprete JS → non lo vede
+- Seccomp userebbe le **stesse syscall legittime** dell'app (`openat`, `read`) → non si può bloccare senza romperla
+
+# Bug di **Codice**. Si ripara solo allo **shift-left**.
+
+<!--
+[36:30 → 37:30] DEMO su Docker (container hardened, porta 6663).
+Comando: ./tests/test-node.sh app-distroless-hardened eval. Torna ROSSO, anche col profilo AppArmor attivo.
+"Torniamo all'attacco che non abbiamo mai davvero chiuso: eval. AppArmor l'ha lasciato passare perché media l'accesso ai FILE —
+non capisce cosa fa l'interprete JavaScript una volta che il processo può leggere quel file."
+"E Seccomp? Stessa storia, più sottile: se blocco openat o read per fermare un eval-che-legge-un-token, rompo anche i requisiti
+legittimi dell'app — Node deve poter aprire e leggere file per funzionare. Non posso distinguere a livello di syscall
+un read 'legittimo' da uno 'malizioso': sono LA STESSA syscall."
+"Quindi: distroless non lo tocca, AppArmor non lo vede, Seccomp non può bloccarlo senza rompere l'app.
+Nessun layer RUNTIME risolve eval, perché eval non è un problema di runtime: è un bug scritto nel CODICE.
+E un bug di codice si ripara PRIMA che il codice giri: shift-left. Torniamo ad Argus."
 -->
 
 ---
@@ -507,18 +608,24 @@ Sintesi della difesa in profondità. "Non è UNA cosa. È stratificare, sapendo 
 ## 10. Trovarli **prima** della produzione
 ### Security review aumentata dall'AI — Argus
 
-Come trovi un LFI, un `eval`, un memfd nel codice *prima* del deploy?
+Come trovi un LFI, un `eval`, un memfd nel codice *prima* del deploy? **Static analysis.**
 
-- Assist al talk di **Davide Imola**
-- Tool CLI **gotrova** + skill di review con AI
-- `go install github.com/gafreax/gotrova/cmd/gotrova@latest`
+- Semgrep · CodeQL · gosec (Go) · Bandit (Python) · ESLint security · Gitleaks (secrets) · OSV-Scanner (deps)
+- **Argus** orchestra Semgrep + Gitleaks + OSV-Scanner + ragionamento AI — **sempre un umano nel loop**
+- Assist al talk di **Davide Imola** · Tool CLI **gotrova**: `go install github.com/gafreax/gotrova/cmd/gotrova@latest`
 
 <!--
-[34:30 → 36:30]
-Chiudi il cerchio: "Tutti i bug di oggi sono nel CODICE. Il posto migliore per fermarli è la review, prima del deploy.
-Ma noi umani ci perdiamo un eval in mezzo a 10.000 righe. L'AI no."
-Assist a Davide Imola (coordina col suo talk). Presenta Argus/gotrova come review aumentata, non magica —
-coerente con la tesi: "anche l'AI è un anello, non la bacchetta magica."
+[37:30 → 39:30]
+Chiudi il cerchio: "Tutti i bug di oggi sono nel CODICE — command injection, LFI, eval, persino il fileless Go.
+Il posto migliore per fermarli è la review, PRIMA del deploy, non a runtime."
+"Il mondo static-analysis è pieno di strumenti maturi: Semgrep per pattern semantici cross-linguaggio, CodeQL di GitHub
+per query strutturali profonde, gosec se scrivete Go, Bandit se scrivete Python, i plugin di sicurezza di ESLint per JS/TS,
+Gitleaks per beccare segreti finiti nel repo, OSV-Scanner per le vulnerabilità nelle dipendenze."
+"Argus — il progetto che presento assieme a Davide Imola — orchestra diversi di questi tool (Semgrep, Gitleaks, OSV-Scanner)
+e ci aggiunge un livello di ragionamento AI per correlare e prioritizzare i risultati. Ma — esattamente come per l'allowlist
+AppArmor di prima — SEMPRE con un umano nel loop: l'AI accelera la review, non la sostituisce."
+"Noi umani ci perdiamo un eval in mezzo a 10.000 righe. L'AI aiuta a trovarlo. Ma la decisione finale resta umana."
+Assist a Davide Imola (coordina col suo talk).
 -->
 
 ---
@@ -532,7 +639,7 @@ coerente con la tesi: "anche l'AI è un anello, non la bacchetta magica."
 - Ogni difesa protegge da *una* minaccia. Serve la **catena**.
 
 <!--
-[36:30 → 38:00] Chiusura forte. Rallenta, guarda il pubblico.
+[39:30 → 41:00] Chiusura forte. Rallenta, guarda il pubblico.
 "Se portate a casa una frase sola: 'più sicuro' è un comparativo, non uno stato.
 Ogni volta che leggete 'secure by default', 'zero trust', 'hardened', 'managed' — chiedetevi: contro COSA?
 Poi andate a fondo. Le buzzword iniziano il ragionamento. Non lo finiscono."
@@ -548,10 +655,11 @@ Poi andate a fondo. Le buzzword iniziano il ragionamento. Non lo finiscono."
 - **GoogleContainerTools/distroless**
 - **GKE** — Shared responsibility · Autopilot · Sandbox (gVisor) · Workload Identity
 - **CVE-2024-3094** (xz backdoor)
+- Static analysis: **Semgrep** · **CodeQL** · **gosec** · **Bandit** · **Gitleaks** · **OSV-Scanner**
 - Repo demo + **gotrova**: `github.com/gafreax/gotrova`
 
 <!--
-[38:00 → 38:30] Lascia questa slide su durante le domande.
+[41:00 → 41:30] Lascia questa slide su durante le domande.
 -->
 
 ---
@@ -562,7 +670,7 @@ Poi andate a fondo. Le buzzword iniziano il ragionamento. Non lo finiscono."
 <span class="small">Le slide e il codice della demo sono nel repo.</span>
 
 <!--
-[38:30 → 40:00+] Q&A.
+[41:30 → 43:00+] Q&A.
 Ripassa prima le "domande scomode" in docs/04-review-opus.md (sez. 6):
 Distroless inutile? / GKE mi protegge? / Autopilot? / gVisor? / perché non un WAF? /
 AppArmor su managed? / il token è reale? / read-only non basta? / non-root?
