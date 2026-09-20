@@ -1,0 +1,12 @@
+{
+  "name": "demo-node-lfi",
+  "version": "1.0.0",
+  "description": "Vulnerable Node.js App",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "fastify": "^4.26.2"
+  }
+}
