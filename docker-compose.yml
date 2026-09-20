@@ -38,3 +38,21 @@ services:
     user: "1000"
     security_opt:
       - apparmor=docker-node-hardened
+
+  # 4. Go fileless demo (distroless static) - the memfd_create primitive is available
+  app-go-distroless:
+    build:
+      context: ./src/demo-go
+      dockerfile: Dockerfile
+    ports:
+      - "6664:8080"
+
+  # 5. Go fileless demo + Seccomp - memfd_create denied at the kernel (EPERM)
+  app-go-distroless-hardened:
+    build:
+      context: ./src/demo-go
+      dockerfile: Dockerfile
+    ports:
+      - "6665:8080"
+    security_opt:
+      - seccomp=./k8s/security/seccomp-go.json

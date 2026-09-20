@@ -1,0 +1,13 @@
+{
+  "_comment": "Teaching Seccomp profile: default-allow (blacklist style, like the AppArmor demo) that denies memfd_create, the syscall behind in-memory/fileless execution. NOTE: we do NOT block execve here -- the container runtime needs it to launch the entrypoint, so blocking it stops the container from ever starting. In production you use default-deny (allowlist), like Docker's built-in default profile.",
+  "defaultAction": "SCMP_ACT_ALLOW",
+  "architectures": ["SCMP_ARCH_X86_64", "SCMP_ARCH_AARCH64"],
+  "syscalls": [
+    {
+      "names": ["memfd_create", "memfd_secret"],
+      "action": "SCMP_ACT_ERRNO",
+      "errnoRet": 1,
+      "comment": "deny the fileless primitive: an anonymous in-RAM file to exec from"
+    }
+  ]
+}
