@@ -2,46 +2,46 @@ const fastify = require('fastify')({ logger: true });
 const fs = require('fs');
 const { exec } = require('child_process');
 
-// 1. Command Injection classica (via exec -> richiede /bin/sh)
-//    - Su immagine CLASSICA: l'attacco RIESCE (la shell c'è, il comando iniettato gira)
-//    - Su immagine DISTROLESS: l'attacco FALLISCE con ENOENT
-//      ("Error NO ENTry": il file /bin/sh non esiste, Node non può lanciarlo)
+// 1. Classic Command Injection (via exec -> needs /bin/sh)
+//    - Classic image:    attack SUCCEEDS (the shell exists, the injected command runs)
+//    - Distroless image: attack FAILS with ENOENT
+//      ("Error NO ENTry": /bin/sh does not exist, Node cannot spawn it)
 fastify.get('/attack/command-injection', (request, reply) => {
     const ip = request.query.ip || '8.8.8.8';
     exec(`ping -c 1 ${ip}`, (error, stdout, stderr) => {
         if (error) {
-            return reply.code(500).send(`[FALLITO] Errore: ${error.message}\n`);
+            return reply.code(500).send(`[FAILED] ${error.message}\n`);
         }
         return reply.send(stdout);
     });
 });
 
-// 2. LFI / Path Traversal (via fs.readFileSync -> NON richiede nessuna shell)
-//    - Su immagine DISTROLESS: l'attacco RIESCE lo stesso (è codice Node puro)
-//    - Su immagine HARDENED (+AppArmor): l'attacco FALLISCE con EACCES
-//      ("Error ACCESs": il file esiste, ma il kernel nega il permesso di lettura)
+// 2. LFI / Path Traversal (via fs.readFileSync -> no shell needed)
+//    - Distroless image: attack SUCCEEDS anyway (it is pure Node code)
+//    - Hardened image (+AppArmor): attack FAILS with EACCES
+//      ("Error ACCESs": the file exists, but the kernel denies read permission)
 fastify.get('/attack/path-traversal', async (request, reply) => {
     try {
         return reply.send(fs.readFileSync(request.query.file, 'utf8'));
     } catch (err) {
-        return reply.code(500).send(`Errore di lettura: ${err.code || err.message}\n`);
+        return reply.code(500).send(`Read error: ${err.code || err.message}\n`);
     }
 });
 
-// 3. RCE vera (Esecuzione Arbitraria di Codice JS via eval -> NON richiede nessuna shell)
-// Permette a un attaccante di far eseguire a Node.js qualsiasi istruzione,
-// sfruttando moduli nativi (es. fs, net) e aggirando completamente l'assenza di /bin/sh.
+// 3. True RCE (arbitrary JS execution via eval -> no shell needed)
+// Lets an attacker run any instruction inside Node, using native modules
+// (e.g. fs, net) and completely bypassing the absence of /bin/sh.
 fastify.get('/attack/eval-rce', (request, reply) => {
     try {
         const payload = request.query.code;
-        // ERRORE CRITICO: esecuzione di codice arbitrario non sanitizzato.
+        // CRITICAL FLAW: execution of unsanitized arbitrary code.
         const result = eval(payload);
-        return reply.send(`Risultato RCE:\n${result}\n`);
+        return reply.send(`RCE result: ${result}\n`);
     } catch (err) {
-        return reply.code(500).send(`Errore RCE: ${err.message}\n`);
+        return reply.code(500).send(`RCE error: ${err.message}\n`);
     }
 });
 
 fastify.listen({ port: 8080, host: '0.0.0.0' })
-    .then(() => console.log('Fastify API in ascolto su porta 8080 (Distroless)'))
+    .then(() => console.log('Fastify API listening on port 8080'))
     .catch(err => process.exit(1));
