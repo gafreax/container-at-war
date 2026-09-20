@@ -12,7 +12,7 @@ services:
       - ./k8s/easter-egg-passwd:/etc/passwd:ro
 
   # 2. Container vulnerabile (Distroless)
-  app-vulnerable:
+  app-distroless:
     build:
       context: ./src/demo-node
       dockerfile: Dockerfile
@@ -23,7 +23,7 @@ services:
       - ./k8s/easter-egg-passwd:/etc/passwd:ro
 
   # 3. Container protetto da Hardening (AppArmor + ReadOnly)
-  app-hardened:
+  app-distroless-hardened:
     build:
       context: ./src/demo-node
       dockerfile: Dockerfile

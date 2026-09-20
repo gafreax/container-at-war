@@ -400,7 +400,7 @@ deny /var/run/secrets/kubernetes.io/serviceaccount/** mrw,
 <span class="small">Nota onesta: qui uso una blacklist per didattica. In produzione → allowlist.</span>
 
 <!--
-[24:00 → 26:00] DEMO su Docker (container app-hardened, porta 6663, con security_opt apparmor).
+[24:00 → 26:00] DEMO su Docker (container app-distroless-hardened, porta 6663, con security_opt apparmor).
 Rilancia lo stesso curl LFI di prima contro 6663: fallisce con permission denied.
 "Il kernel dell'host ha intercettato la readFileSync di Node PRIMA che leggesse il file."
 Onestà: "Sto usando una blacklist — 'nega questi file'. È fragile: dimentichi un file e sei fregato.

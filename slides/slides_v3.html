@@ -798,7 +798,7 @@ Se ti avanza tempo a fine talk, lo mostri come bonus.</p></div><div class="bespo
 Sono un anello più in basso — nel kernel.&quot;</p></div><div class="bespoke-marp-note" data-index="17" tabindex="0"><p>[22:30 → 24:00]
 Concetto chiave spesso frainteso: &quot;Il container condivide il kernel dell'host.
 Non c'è un kernel 'dentro' l'immagine. Quindi le difese kernel — AppArmor, Seccomp —
-vivono sul NODO, non nell'immagine. Ecco perché distroless da solo non può offrirle.&quot;</p></div><div class="bespoke-marp-note" data-index="18" tabindex="0"><p>[24:00 → 26:00] DEMO su Docker (container app-hardened, porta 6663, con security_opt apparmor).
+vivono sul NODO, non nell'immagine. Ecco perché distroless da solo non può offrirle.&quot;</p></div><div class="bespoke-marp-note" data-index="18" tabindex="0"><p>[24:00 → 26:00] DEMO su Docker (container app-distroless-hardened, porta 6663, con security_opt apparmor).
 Rilancia lo stesso curl LFI di prima contro 6663: fallisce con permission denied.
 &quot;Il kernel dell'host ha intercettato la readFileSync di Node PRIMA che leggesse il file.&quot;
 Onestà: &quot;Sto usando una blacklist — 'nega questi file'. È fragile: dimentichi un file e sei fregato.
