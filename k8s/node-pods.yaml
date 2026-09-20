@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: app-vulnerable
+  name: app-distroless
   labels:
     app: node-vulnerable
 spec:
@@ -16,7 +16,7 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: app-hardened
+  name: app-distroless-hardened
   labels:
     app: node-hardened
   annotations:

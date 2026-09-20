@@ -24,9 +24,9 @@ Makefile           Target per generare le slide (slides / slides-pdf / slides-wa
 ## Demo rapida (Docker)
 
 ```bash
-docker compose up --build -d app-classic app-vulnerable
+docker compose up --build -d app-classic app-distroless
 # app-classic (6661):    /attack/command-injection RIESCE (c'è /bin/sh)
-# app-vulnerable (6662): /attack/command-injection FALLISCE (ENOENT, niente shell)
+# app-distroless (6662): /attack/command-injection FALLISCE (ENOENT, niente shell)
 #                        /attack/path-traversal e /attack/eval-rce RIESCONO comunque
 ./tests/test_vulnerability.sh 6662
 docker compose down
