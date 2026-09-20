@@ -28,7 +28,7 @@ docker compose up --build -d app-classic app-distroless
 # app-classic (6661):    /attack/command-injection RIESCE (c'è /bin/sh)
 # app-distroless (6662): /attack/command-injection FALLISCE (ENOENT, niente shell)
 #                        /attack/path-traversal e /attack/eval-rce RIESCONO comunque
-./tests/test_vulnerability.sh 6662
+./tests/test_vulnerability.sh app-distroless
 docker compose down
 ```
 
