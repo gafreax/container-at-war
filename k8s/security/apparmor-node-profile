@@ -1,24 +1,26 @@
 #include <tunables/global>
 
 profile docker-node-hardened flags=(attach_disconnected,mediate_deleted) {
-  # Include le astrazioni di base del kernel
+  # Base kernel abstractions
   #include <abstractions/base>
   #include <abstractions/nameservice>
-  
-  # Consenti l'accesso a tutte le funzionalità di rete
+
+  # Allow all network operations
   network,
 
-  # Approccio "Blacklist" per scopi didattici:
-  # Consentiamo in lettura tutti i file necessari al runtime Node.js...
+  # "Blacklist" approach, for teaching purposes:
+  # allow reading everything the Node.js runtime needs...
   file,
 
-  # ... MA BLOCCHIAMO esplicitamente la lettura dei file sensibili!
-  # Se la nostra app prova a leggerli via LFI, il kernel Linux bloccherà la syscall.
+  # ...BUT explicitly deny reading the sensitive files.
+  # If the app tries to read them via LFI, the Linux kernel blocks the syscall (EACCES).
+  # NOTE: /etc/come-to-code.conf is intentionally NOT listed here -> the blacklist
+  #       "forgets" it, which is exactly the point we make on stage.
   deny /etc/passwd mrw,
   deny /etc/shadow mrw,
   deny /var/run/secrets/kubernetes.io/serviceaccount/** mrw,
 
-  # Blocca anche operazioni di sistema pericolose
+  # Also block dangerous system operations
   deny mount,
   deny ptrace,
 }

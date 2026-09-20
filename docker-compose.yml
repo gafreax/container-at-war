@@ -9,6 +9,7 @@ services:
     volumes:
       - ./k8s/easter-egg-passwd:/etc/passwd:ro
       - ./k8s/mock-token:/var/run/secrets/kubernetes.io/serviceaccount/token:ro
+      - ./k8s/come-to-code.conf:/etc/come-to-code.conf:ro
 
   # 2. Vulnerable container (distroless)
   app-distroless:
@@ -20,6 +21,7 @@ services:
     volumes:
       - ./k8s/mock-token:/var/run/secrets/kubernetes.io/serviceaccount/token:ro
       - ./k8s/easter-egg-passwd:/etc/passwd:ro
+      - ./k8s/come-to-code.conf:/etc/come-to-code.conf:ro
 
   # 3. Hardened container (AppArmor + read-only filesystem)
   app-distroless-hardened:
@@ -31,6 +33,7 @@ services:
     volumes:
       - ./k8s/mock-token:/var/run/secrets/kubernetes.io/serviceaccount/token:ro
       - ./k8s/easter-egg-passwd:/etc/passwd:ro
+      - ./k8s/come-to-code.conf:/etc/come-to-code.conf:ro
     read_only: true
     user: "1000"
     security_opt:
