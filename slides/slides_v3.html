@@ -144,8 +144,8 @@ code { font-size: 0.8em; }
 ;background-color:#fff;background-image:none;" data-marpit-pagination-total="28">
 <h2 id="2-round-1--la-falsa-vittoria">2. Round 1 — La falsa vittoria</h2>
 <h3 id="command-injection">Command Injection</h3>
-<pre is="marp-pre" data-auto-scaling="downscale-only"><code class="language-js"><span class="hljs-comment">// src/demo-node/server.js  —  endpoint /api/v1/ping</span>
-fastify.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;/api/v1/ping&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">req, reply</span>) =&gt;</span> {
+<pre is="marp-pre" data-auto-scaling="downscale-only"><code class="language-js"><span class="hljs-comment">// src/demo-node/server.js  —  endpoint /attack/command-injection</span>
+fastify.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;/attack/command-injection&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">req, reply</span>) =&gt;</span> {
   <span class="hljs-keyword">const</span> ip = req.<span class="hljs-property">query</span>.<span class="hljs-property">ip</span> || <span class="hljs-string">&#x27;8.8.8.8&#x27;</span>;
   <span class="hljs-title function_">exec</span>(<span class="hljs-string">`ping -c 1 <span class="hljs-subst">${ip}</span>`</span>, <span class="hljs-function">(<span class="hljs-params">err, stdout</span>) =&gt;</span> {   <span class="hljs-comment">// &lt;-- exec = /bin/sh -c</span>
     <span class="hljs-keyword">return</span> reply.<span class="hljs-title function_">send</span>(err ? <span class="hljs-string">`[BLOCCATO] <span class="hljs-subst">${err.message}</span>`</span> : stdout);
@@ -173,12 +173,12 @@ code { font-size: 0.8em; }
 ;background-color:#fff;background-image:none;" data-marpit-pagination-total="28">
 <h2 id="demo--immagine-classica-vs-distroless">Demo — immagine classica vs distroless</h2>
 <p><span class="tag">DEMO Docker</span></p>
-<pre is="marp-pre" data-auto-scaling="downscale-only"><code class="language-bash"><span class="hljs-comment"># Immagine Node CLASSICA (porta 8079)</span>
-curl <span class="hljs-string">&quot;localhost:8079/api/v1/ping?ip=8.8.8.8;%20ls%20-la&quot;</span>
+<pre is="marp-pre" data-auto-scaling="downscale-only"><code class="language-bash"><span class="hljs-comment"># Immagine Node CLASSICA (porta 6661)</span>
+curl <span class="hljs-string">&quot;localhost:6661/attack/command-injection?ip=8.8.8.8;%20ls%20-la&quot;</span>
 <span class="hljs-comment">#  -&gt; funziona: eseguo comandi arbitrari</span>
 
-<span class="hljs-comment"># Immagine DISTROLESS (porta 8080)</span>
-curl <span class="hljs-string">&quot;localhost:8080/api/v1/ping?ip=8.8.8.8;%20ls%20-la&quot;</span>
+<span class="hljs-comment"># Immagine DISTROLESS (porta 6662)</span>
+curl <span class="hljs-string">&quot;localhost:6662/attack/command-injection?ip=8.8.8.8;%20ls%20-la&quot;</span>
 <span class="hljs-comment">#  -&gt; spawn /bin/sh ENOENT   (niente shell!)</span>
 </code></pre>
 </section>
@@ -250,8 +250,8 @@ code { font-size: 0.8em; }
 ;background-color:#fff;background-image:none;" data-marpit-pagination-total="28">
 <h2 id="4-round-2--lillusione-cade">4. Round 2 — L'illusione cade</h2>
 <h3 id="local-file-inclusion--path-traversal">Local File Inclusion / Path Traversal</h3>
-<pre is="marp-pre" data-auto-scaling="downscale-only"><code class="language-js"><span class="hljs-comment">// endpoint /api/v1/download</span>
-fastify.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;/api/v1/download&#x27;</span>, <span class="hljs-title function_">async</span> (req, reply) =&gt; {
+<pre is="marp-pre" data-auto-scaling="downscale-only"><code class="language-js"><span class="hljs-comment">// endpoint /attack/path-traversal</span>
+fastify.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;/attack/path-traversal&#x27;</span>, <span class="hljs-title function_">async</span> (req, reply) =&gt; {
   <span class="hljs-keyword">return</span> reply.<span class="hljs-title function_">send</span>(
     fs.<span class="hljs-title function_">readFileSync</span>(req.<span class="hljs-property">query</span>.<span class="hljs-property">file</span>, <span class="hljs-string">&#x27;utf8&#x27;</span>)   <span class="hljs-comment">// &lt;-- nessuna validazione</span>
   );
@@ -278,7 +278,7 @@ code { font-size: 0.8em; }
 ;background-color:#fff;background-image:none;" data-marpit-pagination-total="28">
 <h2 id="demo--leggo-etcpasswd">Demo — leggo <code>/etc/passwd</code></h2>
 <p><span class="tag">DEMO Docker</span></p>
-<pre is="marp-pre" data-auto-scaling="downscale-only"><code class="language-bash">curl <span class="hljs-string">&quot;localhost:8080/api/v1/download?file=../../../../etc/passwd&quot;</span>
+<pre is="marp-pre" data-auto-scaling="downscale-only"><code class="language-bash">curl <span class="hljs-string">&quot;localhost:6662/attack/path-traversal?file=../../../../etc/passwd&quot;</span>
 </code></pre>
 <pre is="marp-pre" data-auto-scaling="downscale-only"><code>root:x:0:0:root:/root:/bin/bash
 ...
@@ -305,7 +305,7 @@ code { font-size: 0.8em; }
 ;background-color:#fff;background-image:none;" data-marpit-pagination-total="28">
 <h2 id="demo--il-danno-vero-il-token-del-cluster">Demo — il danno vero: il token del cluster</h2>
 <p><span class="tag">DEMO Docker</span></p>
-<pre is="marp-pre" data-auto-scaling="downscale-only"><code class="language-bash">curl <span class="hljs-string">&quot;localhost:8080/api/v1/download?file=\
+<pre is="marp-pre" data-auto-scaling="downscale-only"><code class="language-bash">curl <span class="hljs-string">&quot;localhost:6662/attack/path-traversal?file=\
 ../../var/run/secrets/kubernetes.io/serviceaccount/token&quot;</span>
 </code></pre>
 <p>Service Account Token → <strong>movimento laterale nel cluster</strong>.<br />
@@ -359,8 +359,8 @@ code { font-size: 0.8em; }
 ;background-color:#fff;background-image:none;" data-marpit-pagination-total="28">
 <h2 id="5-round-3--rce-senza-shell">5. Round 3 — RCE <strong>senza</strong> shell</h2>
 <h3 id="il-runtime-%C3%A8-la-shell">Il runtime <em>è</em> la shell</h3>
-<pre is="marp-pre" data-auto-scaling="downscale-only"><code class="language-js"><span class="hljs-comment">// endpoint /api/v1/eval</span>
-fastify.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;/api/v1/eval&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">req, reply</span>) =&gt;</span> {
+<pre is="marp-pre" data-auto-scaling="downscale-only"><code class="language-js"><span class="hljs-comment">// endpoint /attack/eval-rce</span>
+fastify.<span class="hljs-title function_">get</span>(<span class="hljs-string">&#x27;/attack/eval-rce&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">req, reply</span>) =&gt;</span> {
   <span class="hljs-keyword">const</span> result = <span class="hljs-built_in">eval</span>(req.<span class="hljs-property">query</span>.<span class="hljs-property">code</span>);   <span class="hljs-comment">// &lt;-- esecuzione arbitraria JS</span>
   <span class="hljs-keyword">return</span> reply.<span class="hljs-title function_">send</span>(<span class="hljs-string">`Risultato: <span class="hljs-subst">${result}</span>`</span>);
 });
@@ -387,7 +387,7 @@ code { font-size: 0.8em; }
 <h2 id="demo--esecuzione-di-codice-arbitrario">Demo — esecuzione di codice arbitrario</h2>
 <p><span class="tag">DEMO Docker</span></p>
 <pre is="marp-pre" data-auto-scaling="downscale-only"><code class="language-bash"><span class="hljs-comment"># leggo il token direttamente da codice JS, dentro Node</span>
-curl <span class="hljs-string">&quot;localhost:8080/api/v1/eval?code=\
+curl <span class="hljs-string">&quot;localhost:6662/attack/eval-rce?code=\
 require(&#x27;fs&#x27;).readFileSync(&#x27;/var/run/secrets/kubernetes.io/\
 serviceaccount/token&#x27;,&#x27;utf8&#x27;)&quot;</span>
 </code></pre>
@@ -756,8 +756,8 @@ Il punto del talk è un altro: risolvono UN problema, non IL problema.&quot;
 Ripeti il claim di marketing: &quot;Il messaggio implicito però è: 'minimale = sicuro'. È lì che caschiamo.&quot;</p></div><div class="bespoke-marp-note" data-index="4" tabindex="0"><p>[4:00 → 4:30] Ponte verso la prima demo. Tono da &quot;mettiamo alla prova il claim&quot;.</p></div><div class="bespoke-marp-note" data-index="5" tabindex="0"><p>[4:30 → 6:00] CODE.
 Commenta: &quot;Classico bug da manuale. Concateno input utente dentro un comando. `exec` di Node NON esegue il binario direttamente: apre `/bin/sh -c '...'`. Tenete a mente questo dettaglio.&quot;
 Payload che mostreremo: ip = 8.8.8.8; ls -la  → su immagine classica esegue anche `ls`.</p></div><div class="bespoke-marp-note" data-index="6" tabindex="0"><p>[6:00 → 8:00] DEMO su Docker (docker-compose up già avviato prima del talk).
-1. Lancia contro 8079 (classica): mostra l'output di ls, &quot;ho l'esecuzione&quot;.
-2. Lancia contro 8080 (distroless): ENOENT.
+1. Lancia contro 6661 (classica): mostra l'output di ls, &quot;ho l'esecuzione&quot;.
+2. Lancia contro 6662 (distroless): ENOENT.
 Battuta: &quot;Distroless 1 - Attaccante 0. Vittoria! ... Fine del talk? Grazie a tutti?&quot;
 Pausa comica, poi: &quot;No. Perché ho appena barato con voi.&quot;</p></div><div class="bespoke-marp-note" data-index="7" tabindex="0"><p>[8:00 → 9:00] Il primo ribaltone concettuale.
 Dì: &quot;Ho scelto apposta un attacco che ha BISOGNO della shell. Ho truccato il match.
@@ -770,7 +770,7 @@ Nessuna quantità di hardening del Container ripara un anello che sta più in al
 Cita OWASP Top 10: injection, path traversal, deserializzazione insicura — sono tutti bug di 'Code'.</p></div><div class="bespoke-marp-note" data-index="9" tabindex="0"><p>[11:00 → 12:30] CODE.
 &quot;Qui non c'è nessuna shell coinvolta. `fs.readFileSync` è codice Node nativo.
 L'attaccante controlla il path. Distroless non può fare NULLA: sto usando una funzione legittima del runtime.&quot;
-Prepara il pubblico all'easter egg.</p></div><div class="bespoke-marp-note" data-index="10" tabindex="0"><p>[12:30 → 14:00] DEMO su Docker (distroless, porta 8080).
+Prepara il pubblico all'easter egg.</p></div><div class="bespoke-marp-note" data-index="10" tabindex="0"><p>[12:30 → 14:00] DEMO su Docker (distroless, porta 6662).
 Lascia che il pubblico legga l'easter egg. Momento leggero: &quot;Sul mio server gira anche Darth Vader, shell /bin/force_choke.&quot;
 Poi serio: &quot;Ok, ho letto /etc/passwd. Chi se ne frega. Ora alziamo la posta.&quot;</p></div><div class="bespoke-marp-note" data-index="11" tabindex="0"><p>[14:00 → 15:30] DEMO.
 Mostra il JWT, decodificalo su jwt.io (assicurati sia il token FINTO valido, non quello malformato del repo).
@@ -798,8 +798,8 @@ Se ti avanza tempo a fine talk, lo mostri come bonus.</p></div><div class="bespo
 Sono un anello più in basso — nel kernel.&quot;</p></div><div class="bespoke-marp-note" data-index="17" tabindex="0"><p>[22:30 → 24:00]
 Concetto chiave spesso frainteso: &quot;Il container condivide il kernel dell'host.
 Non c'è un kernel 'dentro' l'immagine. Quindi le difese kernel — AppArmor, Seccomp —
-vivono sul NODO, non nell'immagine. Ecco perché distroless da solo non può offrirle.&quot;</p></div><div class="bespoke-marp-note" data-index="18" tabindex="0"><p>[24:00 → 26:00] DEMO su Docker (container app-hardened, porta 8081, con security_opt apparmor).
-Rilancia lo stesso curl LFI di prima contro 8081: fallisce con permission denied.
+vivono sul NODO, non nell'immagine. Ecco perché distroless da solo non può offrirle.&quot;</p></div><div class="bespoke-marp-note" data-index="18" tabindex="0"><p>[24:00 → 26:00] DEMO su Docker (container app-hardened, porta 6663, con security_opt apparmor).
+Rilancia lo stesso curl LFI di prima contro 6663: fallisce con permission denied.
 &quot;Il kernel dell'host ha intercettato la readFileSync di Node PRIMA che leggesse il file.&quot;
 Onestà: &quot;Sto usando una blacklist — 'nega questi file'. È fragile: dimentichi un file e sei fregato.
 In produzione si fa il contrario: allowlist, nego tutto tranne ciò che serve. È proprio il tema del talk: andare a fondo.&quot;

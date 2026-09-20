@@ -3,32 +3,32 @@ version: '3.8'
 services:
   # 1. Container con immagine Node CLASSICA (piena di bash e tool) - per la prima Demo
   app-classic:
-    build: 
+    build:
       context: ./src/demo-node
       dockerfile: Dockerfile.classic
     ports:
-      - "8079:8080"
+      - "6661:8080"
     volumes:
       - ./k8s/easter-egg-passwd:/etc/passwd:ro
 
   # 2. Container vulnerabile (Distroless)
   app-vulnerable:
-    build: 
+    build:
       context: ./src/demo-node
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "6662:8080"
     volumes:
       - ./k8s/mock-token:/var/run/secrets/kubernetes.io/serviceaccount/token:ro
       - ./k8s/easter-egg-passwd:/etc/passwd:ro
 
   # 3. Container protetto da Hardening (AppArmor + ReadOnly)
   app-hardened:
-    build: 
+    build:
       context: ./src/demo-node
       dockerfile: Dockerfile
     ports:
-      - "8081:8080"
+      - "6663:8080"
     volumes:
       - ./k8s/mock-token:/var/run/secrets/kubernetes.io/serviceaccount/token:ro
       - ./k8s/easter-egg-passwd:/etc/passwd:ro

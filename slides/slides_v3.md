@@ -108,8 +108,8 @@ Verifichiamolo. Con il codice, non con gli slogan.
 ### Command Injection
 
 ```js
-// src/demo-node/server.js  —  endpoint /api/v1/ping
-fastify.get('/api/v1/ping', (req, reply) => {
+// src/demo-node/server.js  —  endpoint /attack/command-injection
+fastify.get('/attack/command-injection', (req, reply) => {
   const ip = req.query.ip || '8.8.8.8';
   exec(`ping -c 1 ${ip}`, (err, stdout) => {   // <-- exec = /bin/sh -c
     return reply.send(err ? `[BLOCCATO] ${err.message}` : stdout);
@@ -132,19 +132,19 @@ Payload che mostreremo: ip = 8.8.8.8; ls -la  → su immagine classica esegue an
 <span class="tag">DEMO Docker</span>
 
 ```bash
-# Immagine Node CLASSICA (porta 8079)
-curl "localhost:8079/api/v1/ping?ip=8.8.8.8;%20ls%20-la"
+# Immagine Node CLASSICA (porta 6661)
+curl "localhost:6661/attack/command-injection?ip=8.8.8.8;%20ls%20-la"
 #  -> funziona: eseguo comandi arbitrari
 
-# Immagine DISTROLESS (porta 8080)
-curl "localhost:8080/api/v1/ping?ip=8.8.8.8;%20ls%20-la"
+# Immagine DISTROLESS (porta 6662)
+curl "localhost:6662/attack/command-injection?ip=8.8.8.8;%20ls%20-la"
 #  -> spawn /bin/sh ENOENT   (niente shell!)
 ```
 
 <!--
 [6:00 → 8:00] DEMO su Docker (docker-compose up già avviato prima del talk).
-1. Lancia contro 8079 (classica): mostra l'output di ls, "ho l'esecuzione".
-2. Lancia contro 8080 (distroless): ENOENT.
+1. Lancia contro 6661 (classica): mostra l'output di ls, "ho l'esecuzione".
+2. Lancia contro 6662 (distroless): ENOENT.
 Battuta: "Distroless 1 - Attaccante 0. Vittoria! ... Fine del talk? Grazie a tutti?"
 Pausa comica, poi: "No. Perché ho appena barato con voi."
 -->
@@ -193,8 +193,8 @@ Cita OWASP Top 10: injection, path traversal, deserializzazione insicura — son
 ### Local File Inclusion / Path Traversal
 
 ```js
-// endpoint /api/v1/download
-fastify.get('/api/v1/download', async (req, reply) => {
+// endpoint /attack/path-traversal
+fastify.get('/attack/path-traversal', async (req, reply) => {
   return reply.send(
     fs.readFileSync(req.query.file, 'utf8')   // <-- nessuna validazione
   );
@@ -217,7 +217,7 @@ Prepara il pubblico all'easter egg.
 <span class="tag">DEMO Docker</span>
 
 ```bash
-curl "localhost:8080/api/v1/download?file=../../../../etc/passwd"
+curl "localhost:6662/attack/path-traversal?file=../../../../etc/passwd"
 ```
 
 ```
@@ -228,7 +228,7 @@ neo:x:101:101:The One:/matrix:/bin/fly
 ```
 
 <!--
-[12:30 → 14:00] DEMO su Docker (distroless, porta 8080).
+[12:30 → 14:00] DEMO su Docker (distroless, porta 6662).
 Lascia che il pubblico legga l'easter egg. Momento leggero: "Sul mio server gira anche Darth Vader, shell /bin/force_choke."
 Poi serio: "Ok, ho letto /etc/passwd. Chi se ne frega. Ora alziamo la posta."
 -->
@@ -240,7 +240,7 @@ Poi serio: "Ok, ho letto /etc/passwd. Chi se ne frega. Ora alziamo la posta."
 <span class="tag">DEMO Docker</span>
 
 ```bash
-curl "localhost:8080/api/v1/download?file=\
+curl "localhost:6662/attack/path-traversal?file=\
 ../../var/run/secrets/kubernetes.io/serviceaccount/token"
 ```
 
@@ -288,8 +288,8 @@ Aggancio: "Quindi il managed mi salva? Ci arriviamo tra poco. Prima, il colpo di
 ### Il runtime *è* la shell
 
 ```js
-// endpoint /api/v1/eval
-fastify.get('/api/v1/eval', (req, reply) => {
+// endpoint /attack/eval-rce
+fastify.get('/attack/eval-rce', (req, reply) => {
   const result = eval(req.query.code);   // <-- esecuzione arbitraria JS
   return reply.send(`Risultato: ${result}`);
 });
@@ -313,7 +313,7 @@ senza mai toccare /bin/sh."
 
 ```bash
 # leggo il token direttamente da codice JS, dentro Node
-curl "localhost:8080/api/v1/eval?code=\
+curl "localhost:6662/attack/eval-rce?code=\
 require('fs').readFileSync('/var/run/secrets/kubernetes.io/\
 serviceaccount/token','utf8')"
 ```
@@ -400,8 +400,8 @@ deny /var/run/secrets/kubernetes.io/serviceaccount/** mrw,
 <span class="small">Nota onesta: qui uso una blacklist per didattica. In produzione → allowlist.</span>
 
 <!--
-[24:00 → 26:00] DEMO su Docker (container app-hardened, porta 8081, con security_opt apparmor).
-Rilancia lo stesso curl LFI di prima contro 8081: fallisce con permission denied.
+[24:00 → 26:00] DEMO su Docker (container app-hardened, porta 6663, con security_opt apparmor).
+Rilancia lo stesso curl LFI di prima contro 6663: fallisce con permission denied.
 "Il kernel dell'host ha intercettato la readFileSync di Node PRIMA che leggesse il file."
 Onestà: "Sto usando una blacklist — 'nega questi file'. È fragile: dimentichi un file e sei fregato.
 In produzione si fa il contrario: allowlist, nego tutto tranne ciò che serve. È proprio il tema del talk: andare a fondo."
