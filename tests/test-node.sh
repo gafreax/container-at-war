@@ -74,7 +74,11 @@ run "3. Path Traversal: Kubernetes token  (fake, mounted for the demo)" \
     "Same LFI, aimed at the service account token path." \
     "http://localhost:${PORT}/attack/path-traversal?file=../../../../../../var/run/secrets/kubernetes.io/serviceaccount/token"
 
-run "4. Arbitrary Code Execution  (/attack/eval-rce)" \
+run "4. Path Traversal: planted config  (/etc/come-to-code.conf)" \
+    "Same LFI on a harmless file the AppArmor blacklist forgot to deny." \
+    "http://localhost:${PORT}/attack/path-traversal?file=../../../../../../etc/come-to-code.conf"
+
+run "5. Arbitrary Code Execution  (/attack/eval-rce)" \
     "Executes arbitrary JavaScript through eval() (no shell required)." \
     -G "http://localhost:${PORT}/attack/eval-rce" --data-urlencode "code=1+1"
 
