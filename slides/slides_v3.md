@@ -21,7 +21,7 @@ SPEAKER NOTES — LEGENDA
 - DEMO = esecuzione live SOLO su Docker (docker-compose). Kubernetes viene NOMINATO/MOSTRATO, non eseguito.
 - CODE = commento al codice live (non live-coding: il codice è già a schermo).
 - Tesi ricorrente da ripetere 3-4 volte: «Più sicuro» non vuol dire «sicuro».
-- Budget totale ~43 min. I minuti indicati sono cumulativi indicativi.
+- Budget totale ~45 min. I minuti indicati sono cumulativi indicativi.
 - REGOLA: tieni pronto un video di backup di ogni DEMO. Se si rompe, mandi il video e vai avanti.
 -->
 
@@ -342,21 +342,32 @@ Ripeti la tesi: «Più sicuro» non vuol dire «sicuro».
 ### Go, esecuzione *fileless*
 
 ```go
-// Concetto (commento al codice — NIENTE demo live)
-fd, _ := unix.MemfdCreate("worker", unix.MFD_CLOEXEC) // 1. area in RAM
-// 2. scrivo un eseguibile dentro fd  -> /proc/self/fd/N
-exec.Command("/proc/self/fd/N").Run()                 // 3. eseguo dalla RAM
+// memfd_create: file anonimo, vive SOLO in RAM (mai su disco)
+fd, _ := unix.MemfdCreate("demo", unix.MFD_CLOEXEC)
 ```
 
-Nessun file scritto su disco. Nessuna shell. Solo **syscall**.
+<span class="tag">DEMO Docker</span>
+
+```bash
+./tests/test-go.sh app-go-distroless
+```
+```
+[ATTACK SUCCEEDED - HTTP 200]                       🔴
+[SUCCEEDED] fileless primitive available
+```
+
+Nessun file su disco. Read-only FS inutile qui. AppArmor guarda i **file**, non le syscall: non lo vede.
 
 <!--
-[19:30 → 21:30] CODE — solo commento, nessuna esecuzione live (scelta consapevole di robustezza).
-"Un'altra buzzword: 'binario statico minimale, non c'è niente da attaccare'.
-Con Go posso creare un file in MEMORIA (memfd_create), scriverci dentro un eseguibile,
-e lanciarlo da /proc/self/fd/. Non tocco mai il disco. Un read-only filesystem non serve a niente qui.
-Non lo eseguo dal vivo — è un attacco delicato e voglio rispettare i tempi — ma il meccanismo è questo."
-Se ti avanza tempo a fine talk, lo mostri come bonus.
+[19:30 → 22:30] DEMO su Docker (Go, porta 6664). Ora LIVE — il demo Go+Seccomp funziona, niente più solo commento.
+"Un'altra buzzword: 'binario statico minimale, non c'è niente da attaccare'. Guardiamo."
+Comando: ./tests/test-go.sh app-go-distroless.
+"memfd_create crea un file ANONIMO che vive solo in RAM: non tocca mai il disco. È il primitivo che usa il malware
+fileless vero. Un read-only filesystem qui non serve a NIENTE — non sto scrivendo sul disco. E AppArmor? Guarda i
+FILE, non le syscall: è cieco su questo."
+Onestà (importante): "L'handler è BENIGNO apposta: crea il file in RAM e vi dice che il primitivo è disponibile.
+Non esegue un payload attaccante — mi fermo qui per restare nei tempi e non portare un exploit reale sul palco.
+Il punto di sicurezza è che il primitivo ESISTE, non serve altro."
 -->
 
 ---
@@ -372,7 +383,7 @@ Se ti avanza tempo a fine talk, lo mostri come bonus.
 # Ho bisogno di difese al **livello giusto**.
 
 <!--
-[21:30 → 22:30] Riepilogo prima della svolta positiva.
+[22:30 → 23:30] Riepilogo prima della svolta positiva.
 "Fin qui vi ho depresso. Ora la buona notizia: le difese esistono. Ma NON sono nell'immagine.
 Sono un anello più in basso — nel kernel."
 -->
@@ -386,7 +397,7 @@ AppArmor e Seccomp sono moduli del **kernel dell'host** (il nodo).
 L'immagine distroless non li conosce: è il **nodo** che intercetta il processo.
 
 <!--
-[22:30 → 24:00]
+[23:30 → 25:00]
 Concetto chiave spesso frainteso: "Il container condivide il kernel dell'host.
 Non c'è un kernel 'dentro' l'immagine. Quindi le difese kernel — AppArmor, Seccomp —
 vivono sul NODO, non nell'immagine. Ecco perché distroless da solo non può offrirle."
@@ -416,7 +427,7 @@ Read error: EACCES
 <span class="small">Nota onesta: qui uso una blacklist per didattica. In produzione → allowlist (vedi slide dopo).</span>
 
 <!--
-[24:00 → 26:00] DEMO su Docker (container app-distroless-hardened, porta 6663, con security_opt apparmor).
+[25:00 → 27:00] DEMO su Docker (container app-distroless-hardened, porta 6663, con security_opt apparmor).
 Comando: ./tests/test-node.sh app-distroless-hardened passwd token — rilancia le stesse due LFI di prima, ora contro 6663.
 Entrambe tornano VERDI: "Read error: EACCES". "Il kernel dell'host ha intercettato la readFileSync di Node PRIMA che leggesse il file."
 Onestà: "Sto usando una blacklist — 'nega questi file'. È fragile: dimentichi un file e sei fregato. Tra un attimo vi mostro esattamente cosa succede quando dimentichi."
@@ -443,7 +454,7 @@ La blacklist **non lo conosce** → nessun `deny`, nessun EACCES.
 > Corretto: **allowlist / default-deny** — nega tutto, permetti solo il minimo.
 
 <!--
-[26:00 → 27:00] DEMO su Docker (stesso container hardened, porta 6663).
+[27:00 → 28:00] DEMO su Docker (stesso container hardened, porta 6663).
 Comando: ./tests/test-node.sh app-distroless-hardened conf.
 Rilancio lo stesso attacco LFI ma su un file diverso: /etc/come-to-code.conf. Torna ROSSO.
 "Guardate il profilo: ho scritto deny su /etc/passwd, /etc/shadow, sul token — ma NON su questo file. Il kernel non lo blocca perché non gli ho mai detto di farlo."
@@ -466,7 +477,7 @@ Qui in demo uso la blacklist perché si legge in 3 righe e si capisce subito il 
 > Un profilo sbagliato-ma-sicuro-di-sé è **peggio** di nessun profilo.
 
 <!--
-[27:00 → 28:00]
+[28:00 → 29:00]
 "Scrivere un allowlist AppArmor o un profilo Seccomp buono, a mano, richiede ore: bisogna sapere ESATTAMENTE quali file,
 quali syscall, quali path usa davvero la tua app in produzione. Per anni questo ha significato documentazione scarna,
 o la classica risposta Stack Overflow del 2013 con tre upvote, copiaincollata pregando che funzioni."
@@ -486,7 +497,7 @@ Man-in-the-loop, sempre. È esattamente la stessa filosofia che vedremo tra poco
 > Ogni feature difende da **una** minaccia. Non da *tutte*.
 
 <!--
-[28:00 → 29:00]
+[29:00 → 30:00]
 Punto sottile ma potente: molte 'checkbox di sicurezza' difendono da minacce specifiche.
 "Read-only non ferma una lettura. Non-root non ferma la lettura di un file leggibile da tutti.
 Non sono inutili — difendono da ALTRO. Ma metterle in check e sentirsi al sicuro è di nuovo la trappola."
@@ -497,20 +508,34 @@ Non sono inutili — difendono da ALTRO. Ma metterle in check e sentirsi al sicu
 ## Seccomp — filtro delle syscall
 
 ```json
-// blocca le syscall dell'attacco fileless
-{ "names": ["execve", "execveat", "memfd_create"],
-  "action": "SCMP_ACT_ERRNO" }
+// k8s/security/seccomp-go.json (estratto)
+{ "defaultAction": "SCMP_ACT_ALLOW",
+  "syscalls": [{ "names": ["memfd_create"], "action": "SCMP_ACT_ERRNO" }] }
 ```
 
-Uccide il fileless Go alla radice. Su K8s: `securityContext.seccompProfile`.
+<span class="tag">DEMO Docker</span>
 
-<span class="small">Caveat: profilo troppo aggressivo = app legittima rotta. Trade-off reale.</span>
+```bash
+./tests/test-go.sh app-go-distroless-hardened
+```
+```
+[ATTACK BLOCKED - HTTP 500]                         🟢
+[BLOCKED] memfd_create denied: operation not permitted
+```
+
+Difesa al **layer giusto**: AppArmor sui file, Seccomp sulle **syscall**.
+
+<span class="small">Reality check: un allowlist di syscall è fragile — una dipendenza aggiornata può far crashare il container in prod con EPERM. Su K8s: `securityContext.seccompProfile`.</span>
 
 <!--
-[29:00 → 30:30] CODE — commento al profilo (nessun live).
-"Seccomp filtra le chiamate al kernel. Blocco memfd_create ed execve → l'attacco Go fileless muore.
-MA: alcune librerie usano memfd_create per cose legittime. Un profilo troppo stretto rompe app vere.
-Questo è IL messaggio: la sicurezza è fatta di trade-off, non di interruttori on/off."
+[30:00 → 32:30] DEMO su Docker (Go hardened, porta 6665, con security_opt seccomp). Ora LIVE.
+"Seccomp filtra le SYSCALL a livello di kernel. Il profilo è default-allow (blacklist, per didattica) e nega SOLO
+memfd_create. NOTA: non blocco execve — serve al runtime per avviare il container, altrimenti non parte nemmeno."
+Comando: ./tests/test-go.sh app-go-distroless-hardened.
+"Il primitivo sparisce: EPERM, 'operation not permitted'. Nego la syscall, non il file — è un layer diverso da
+AppArmor. Difesa al layer giusto: AppArmor per i FILE, Seccomp per le SYSCALL."
+Reality check (onestà): "Ma un allowlist di syscall è fragile: aggiorno una dipendenza, Go introduce una syscall
+nuova per la rete, e in produzione il container crasha con EPERM senza una riga di log chiara. Nulla è gratis."
 Anticipo (senza svelare tutto): "Notate che Seccomp filtra le SYSCALL, non l'interprete. Tenetelo a mente: torna utile più avanti con eval."
 -->
 
@@ -526,7 +551,7 @@ Il tuo **bug applicativo (LFI/RCE) resta tuo.** Vive nell'anello *Code*.
 - **Workload Identity** + token a vita breve → riduce il blast radius del furto token
 
 <!--
-[30:30 → 33:00] La seconda buzzword smontata.
+[32:30 → 35:00] La seconda buzzword smontata.
 "'Managed' è forse la parola più fraintesa. Google patcha il kernel, ruota i certificati, protegge l'API server.
 Fa un lavoro enorme. Ma NON scrive il tuo codice. L'LFI che avete visto gira identico su GKE.
 Il modello si chiama 'shared responsibility': loro l'infrastruttura, TU il workload."
@@ -547,7 +572,7 @@ Non puoi auditare l'**intero albero** delle dipendenze.
 Backdoor inserita a monte, in una libreria di compressione, da un manutentore "fidato".
 
 <!--
-[33:00 → 35:30] La terza buzzword.
+[35:00 → 37:30] La terza buzzword.
 "'Fastify è più sicuro di Express' — magari è vero, ma è un'opinione, non un threat model.
 Il problema vero: la tua app tira dentro centinaia di dipendenze transitive. Non le leggi tutte.
 Nel 2024 xz — una libreria di compressione ovunque — è stata backdoorata da un manutentore che si era
@@ -567,7 +592,7 @@ Distroless + AppArmor + Seccomp + RBAC + token effimeri = **anelli**.
 Nessuno basta da solo. Insieme = **defense in depth**.
 
 <!--
-[35:30 → 36:30]
+[37:30 → 38:30]
 Sintesi della difesa in profondità. "Non è UNA cosa. È stratificare, sapendo che ogni strato può cedere."
 -->
 
@@ -591,7 +616,7 @@ RCE result: 2
 # Bug di **Codice**. Si ripara solo allo **shift-left**.
 
 <!--
-[36:30 → 37:30] DEMO su Docker (container hardened, porta 6663).
+[38:30 → 39:30] DEMO su Docker (container hardened, porta 6663).
 Comando: ./tests/test-node.sh app-distroless-hardened eval. Torna ROSSO, anche col profilo AppArmor attivo.
 "Torniamo all'attacco che non abbiamo mai davvero chiuso: eval. AppArmor l'ha lasciato passare perché media l'accesso ai FILE —
 non capisce cosa fa l'interprete JavaScript una volta che il processo può leggere quel file."
@@ -615,7 +640,7 @@ Come trovi un LFI, un `eval`, un memfd nel codice *prima* del deploy? **Static a
 - Assist al talk di **Davide Imola** · Tool CLI **gotrova**: `go install github.com/gafreax/gotrova/cmd/gotrova@latest`
 
 <!--
-[37:30 → 39:30]
+[39:30 → 41:30]
 Chiudi il cerchio: "Tutti i bug di oggi sono nel CODICE — command injection, LFI, eval, persino il fileless Go.
 Il posto migliore per fermarli è la review, PRIMA del deploy, non a runtime."
 "Il mondo static-analysis è pieno di strumenti maturi: Semgrep per pattern semantici cross-linguaggio, CodeQL di GitHub
@@ -639,7 +664,7 @@ Assist a Davide Imola (coordina col suo talk).
 - Ogni difesa protegge da *una* minaccia. Serve la **catena**.
 
 <!--
-[39:30 → 41:00] Chiusura forte. Rallenta, guarda il pubblico.
+[41:30 → 43:00] Chiusura forte. Rallenta, guarda il pubblico.
 "Se portate a casa una frase sola: 'più sicuro' è un comparativo, non uno stato.
 Ogni volta che leggete 'secure by default', 'zero trust', 'hardened', 'managed' — chiedetevi: contro COSA?
 Poi andate a fondo. Le buzzword iniziano il ragionamento. Non lo finiscono."
@@ -659,7 +684,7 @@ Poi andate a fondo. Le buzzword iniziano il ragionamento. Non lo finiscono."
 - Repo demo + **gotrova**: `github.com/gafreax/gotrova`
 
 <!--
-[41:00 → 41:30] Lascia questa slide su durante le domande.
+[43:00 → 43:30] Lascia questa slide su durante le domande.
 -->
 
 ---
@@ -670,9 +695,8 @@ Poi andate a fondo. Le buzzword iniziano il ragionamento. Non lo finiscono."
 <span class="small">Le slide e il codice della demo sono nel repo.</span>
 
 <!--
-[41:30 → 43:00+] Q&A.
+[43:30 → 45:00+] Q&A.
 Ripassa prima le "domande scomode" in docs/04-review-opus.md (sez. 6):
 Distroless inutile? / GKE mi protegge? / Autopilot? / gVisor? / perché non un WAF? /
 AppArmor su managed? / il token è reale? / read-only non basta? / non-root?
-Se avanzi tempo: mostra il Go fileless come bonus.
 -->
