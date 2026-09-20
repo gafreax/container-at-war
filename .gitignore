@@ -1,0 +1,29 @@
+# macOS
+.DS_Store
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dist/
+
+# Go
+/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# Editors & IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Slide generate (build artifact — si rigenerano con `make slides`)
+slides/slides_v3.pdf

@@ -1,0 +1,24 @@
+#include <tunables/global>
+
+profile docker-node-hardened flags=(attach_disconnected,mediate_deleted) {
+  # Include le astrazioni di base del kernel
+  #include <abstractions/base>
+  #include <abstractions/nameservice>
+  
+  # Consenti l'accesso a tutte le funzionalità di rete
+  network,
+
+  # Approccio "Blacklist" per scopi didattici:
+  # Consentiamo in lettura tutti i file necessari al runtime Node.js...
+  file,
+
+  # ... MA BLOCCHIAMO esplicitamente la lettura dei file sensibili!
+  # Se la nostra app prova a leggerli via LFI, il kernel Linux bloccherà la syscall.
+  deny /etc/passwd mrw,
+  deny /etc/shadow mrw,
+  deny /var/run/secrets/kubernetes.io/serviceaccount/** mrw,
+
+  # Blocca anche operazioni di sistema pericolose
+  deny mount,
+  deny ptrace,
+}
