@@ -25,11 +25,20 @@ Makefile           Target per generare le slide (slides / slides-pdf / slides-wa
 
 ```bash
 docker compose up --build -d app-classic app-vulnerable
-# Command injection: bloccata su distroless, funziona sulla classica
-# LFI / path traversal: funziona su distroless (legge file arbitrari)
-# vedi tests/test_vulnerability.sh
+# app-classic (6661):    /attack/command-injection RIESCE (c'è /bin/sh)
+# app-vulnerable (6662): /attack/command-injection FALLISCE (ENOENT, niente shell)
+#                        /attack/path-traversal e /attack/eval-rce RIESCONO comunque
+./tests/test_vulnerability.sh 6662
 docker compose down
 ```
+
+Endpoint disponibili (stesso path su tutte le immagini, cambia solo il risultato):
+
+| Endpoint | Attacco | Richiede shell? |
+|---|---|---|
+| `/attack/command-injection` | Command Injection classica | Sì → distroless la blocca (`ENOENT`) |
+| `/attack/path-traversal` | LFI / Path Traversal | No → distroless non la ferma |
+| `/attack/eval-rce` | RCE via `eval()` | No → distroless non la ferma |
 
 Guida passo-passo per AppArmor su Minikube in `k8s/` e nelle slide.
 
