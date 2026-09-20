@@ -1,0 +1,119 @@
+[1m=== Attacks against 'app-classic' (port 6661) ===[0m
+Legend: [0;31m[1mRED = attack succeeded[0m | [0;32m[1mGREEN = attack blocked[0m
+
+[1m--- 1. Command Injection  (/attack/command-injection) ---[0m
+[2mInjects a shell command into an unsanitized exec() call.[0m
+[0;31m[1m[ATTACK SUCCEEDED - HTTP 200][0m
+[0;31muid=0(root) gid=0(root) groups=0(root)[0m
+
+[1m--- 2. Path Traversal / LFI  (/attack/path-traversal) ---[0m
+[2mReads an arbitrary file through an unvalidated file path.[0m
+[0;31m[1m[ATTACK SUCCEEDED - HTTP 200][0m
+[0;31mroot:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+sync:x:4:65534:sync:/bin:/bin/sync
+games:x:5:60:games:/usr/games:/usr/sbin/nologin
+man:x:6:12:man:/var/cache/man:/usr/sbin/nologin
+lp:x:7:7:lp:/var/spool/lpd:/usr/sbin/nologin[0m
+
+[1m--- 3. Path Traversal: Kubernetes token  (fake, mounted for the demo) ---[0m
+[2mSame LFI, aimed at the service account token path.[0m
+[0;31m[1m[ATTACK SUCCEEDED - HTTP 200][0m
+[0;31meyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImRlYXRoLXN0YXItc2lnbmluZy1rZXktMDEifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwic3ViIjoic3lzdGVtOnNlcnZpY2VhY2NvdW50OmRlZmF1bHQ6Y2x1c3Rlci1hZG1pbiIsImF1ZCI6WyJodHRwczovL2t1YmVybmV0ZXMuZGVmYXVsdC5zdmMiXSwia3ViZXJuZXRlcy5pbyI6eyJuYW1lc3BhY2UiOiJkZWZhdWx0Iiwic2VydmljZWFjY291bnQiOnsibmFtZSI6ImRhcnRoLXZhZGVyIiwidWlkIjoiNjYtNjYtNjYifX0sIm5hbWUiOiJkYXJ0aF92YWRlciIsImlhdCI6MTUxNjIzOTAyMiwiZXhwIjo5OTk5OTk5OTk5LCJub3RlIjoiRkFLRSBUT0tFTiAtIGRlbW8gb25seSAtIGRvIG5vdCB1c2UifQ.ZmFrZS1rOHMtc2VydmljZS1hY2NvdW50LXRva2VuLWRvLW5vdC11c2U[0m
+
+[1m--- 4. Path Traversal: planted config  (/etc/come-to-code.conf) ---[0m
+[2mSame LFI on a harmless file the AppArmor blacklist forgot to deny.[0m
+[0;31m[1m[ATTACK SUCCEEDED - HTTP 200][0m
+[0;31m# /etc/come-to-code.conf
+# Intentionally fake, harmless file planted for the live demo.
+# If you can read THIS via path traversal, imagine it was /etc/shadow
+# or the Kubernetes service account token instead.
+
+[come-to-code-2026]
+location = Pignola (PZ)
+speaker  = Gabriele Fontana[0m
+
+[1m--- 5. Arbitrary Code Execution  (/attack/eval-rce) ---[0m
+[2mExecutes arbitrary JavaScript through eval() (no shell required).[0m
+[0;31m[1m[ATTACK SUCCEEDED - HTTP 200][0m
+[0;31mRCE result: 2[0m
+
+[1m=== Attacks against 'app-distroless' (port 6662) ===[0m
+Legend: [0;31m[1mRED = attack succeeded[0m | [0;32m[1mGREEN = attack blocked[0m
+
+[1m--- 1. Command Injection  (/attack/command-injection) ---[0m
+[2mInjects a shell command into an unsanitized exec() call.[0m
+[0;32m[1m[ATTACK BLOCKED - HTTP 500][0m
+[0;32m[FAILED] spawn /bin/sh ENOENT[0m
+
+[1m--- 2. Path Traversal / LFI  (/attack/path-traversal) ---[0m
+[2mReads an arbitrary file through an unvalidated file path.[0m
+[0;31m[1m[ATTACK SUCCEEDED - HTTP 200][0m
+[0;31mroot:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+sync:x:4:65534:sync:/bin:/bin/sync
+games:x:5:60:games:/usr/games:/usr/sbin/nologin
+man:x:6:12:man:/var/cache/man:/usr/sbin/nologin
+lp:x:7:7:lp:/var/spool/lpd:/usr/sbin/nologin[0m
+
+[1m--- 3. Path Traversal: Kubernetes token  (fake, mounted for the demo) ---[0m
+[2mSame LFI, aimed at the service account token path.[0m
+[0;31m[1m[ATTACK SUCCEEDED - HTTP 200][0m
+[0;31meyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImRlYXRoLXN0YXItc2lnbmluZy1rZXktMDEifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwic3ViIjoic3lzdGVtOnNlcnZpY2VhY2NvdW50OmRlZmF1bHQ6Y2x1c3Rlci1hZG1pbiIsImF1ZCI6WyJodHRwczovL2t1YmVybmV0ZXMuZGVmYXVsdC5zdmMiXSwia3ViZXJuZXRlcy5pbyI6eyJuYW1lc3BhY2UiOiJkZWZhdWx0Iiwic2VydmljZWFjY291bnQiOnsibmFtZSI6ImRhcnRoLXZhZGVyIiwidWlkIjoiNjYtNjYtNjYifX0sIm5hbWUiOiJkYXJ0aF92YWRlciIsImlhdCI6MTUxNjIzOTAyMiwiZXhwIjo5OTk5OTk5OTk5LCJub3RlIjoiRkFLRSBUT0tFTiAtIGRlbW8gb25seSAtIGRvIG5vdCB1c2UifQ.ZmFrZS1rOHMtc2VydmljZS1hY2NvdW50LXRva2VuLWRvLW5vdC11c2U[0m
+
+[1m--- 4. Path Traversal: planted config  (/etc/come-to-code.conf) ---[0m
+[2mSame LFI on a harmless file the AppArmor blacklist forgot to deny.[0m
+[0;31m[1m[ATTACK SUCCEEDED - HTTP 200][0m
+[0;31m# /etc/come-to-code.conf
+# Intentionally fake, harmless file planted for the live demo.
+# If you can read THIS via path traversal, imagine it was /etc/shadow
+# or the Kubernetes service account token instead.
+
+[come-to-code-2026]
+location = Pignola (PZ)
+speaker  = Gabriele Fontana[0m
+
+[1m--- 5. Arbitrary Code Execution  (/attack/eval-rce) ---[0m
+[2mExecutes arbitrary JavaScript through eval() (no shell required).[0m
+[0;31m[1m[ATTACK SUCCEEDED - HTTP 200][0m
+[0;31mRCE result: 2[0m
+
+[1m=== Attacks against 'app-distroless-hardened' (port 6663) ===[0m
+Legend: [0;31m[1mRED = attack succeeded[0m | [0;32m[1mGREEN = attack blocked[0m
+
+[1m--- 1. Command Injection  (/attack/command-injection) ---[0m
+[2mInjects a shell command into an unsanitized exec() call.[0m
+[0;32m[1m[ATTACK BLOCKED - HTTP 500][0m
+[0;32m[FAILED] spawn /bin/sh ENOENT[0m
+
+[1m--- 2. Path Traversal / LFI  (/attack/path-traversal) ---[0m
+[2mReads an arbitrary file through an unvalidated file path.[0m
+[0;32m[1m[ATTACK BLOCKED - HTTP 500][0m
+[0;32mRead error: EACCES[0m
+
+[1m--- 3. Path Traversal: Kubernetes token  (fake, mounted for the demo) ---[0m
+[2mSame LFI, aimed at the service account token path.[0m
+[0;32m[1m[ATTACK BLOCKED - HTTP 500][0m
+[0;32mRead error: EACCES[0m
+
+[1m--- 4. Path Traversal: planted config  (/etc/come-to-code.conf) ---[0m
+[2mSame LFI on a harmless file the AppArmor blacklist forgot to deny.[0m
+[0;31m[1m[ATTACK SUCCEEDED - HTTP 200][0m
+[0;31m# /etc/come-to-code.conf
+# Intentionally fake, harmless file planted for the live demo.
+# If you can read THIS via path traversal, imagine it was /etc/shadow
+# or the Kubernetes service account token instead.
+
+[come-to-code-2026]
+location = Pignola (PZ)
+speaker  = Gabriele Fontana[0m
+
+[1m--- 5. Arbitrary Code Execution  (/attack/eval-rce) ---[0m
+[2mExecutes arbitrary JavaScript through eval() (no shell required).[0m
+[0;31m[1m[ATTACK SUCCEEDED - HTTP 200][0m
+[0;31mRCE result: 2[0m
+
