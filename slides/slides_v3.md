@@ -122,7 +122,7 @@ fastify.get('/attack/command-injection', (req, reply) => {
 <!--
 [4:30 → 6:00] CODE.
 Commenta: "Classico bug da manuale. Concateno input utente dentro un comando. `exec` di Node NON esegue il binario direttamente: apre `/bin/sh -c '...'`. Tenete a mente questo dettaglio."
-Payload che mostreremo: ip = 8.8.8.8; ls -la  → su immagine classica esegue anche `ls`.
+Payload che mostreremo: ip = 8.8.8.8;id  → su immagine classica esegue anche `id` (uid=0(root)).
 -->
 
 ---
@@ -132,19 +132,23 @@ Payload che mostreremo: ip = 8.8.8.8; ls -la  → su immagine classica esegue an
 <span class="tag">DEMO Docker</span>
 
 ```bash
-./tests/test-node.sh app-classic cmdi
-#  -> RED   [ATTACK SUCCEEDED]  comando arbitrario eseguito, uid=0(root)
+# L'attacco vero è un curl all'endpoint vulnerabile (payload: 8.8.8.8;id)
+curl -sG "http://localhost:6661/attack/command-injection" --data-urlencode "ip=8.8.8.8;id"
+#  -> HTTP 200  ping + id eseguiti → uid=0(root)          🔴  classic: c'è /bin/sh
 
-./tests/test-node.sh app-distroless cmdi
-#  -> GREEN [ATTACK BLOCKED]    spawn /bin/sh ENOENT (niente shell!)
+curl -sG "http://localhost:6662/attack/command-injection" --data-urlencode "ip=8.8.8.8;id"
+#  -> HTTP 500  [FAILED] spawn /bin/sh ENOENT             🟢  distroless: niente shell
 ```
+
+<span class="small">Scorciatoia per le demo successive: <code>./tests/test-node.sh app-classic cmdi</code> — è lo <b>stesso</b> <code>curl</code>, colorato 🔴/🟢 in base allo status HTTP.</span>
 
 <!--
 [6:00 → 8:00] DEMO su Docker (docker-compose up già avviato prima del talk).
-Uso lo script colorato, non curl a mano: ./tests/test-node.sh <target> <attacco>.
-Il colore lo decide lo script dallo status HTTP: RED = attacco riuscito, GREEN = bloccato.
-1. Lancia contro app-classic (6661): banner ROSSO, il comando iniettato (id) gira, nota uid=0(root).
-2. Lancia contro app-distroless (6662): banner VERDE, [FAILED] spawn /bin/sh ENOENT.
+Round 1 lo faccio A MANO col curl, per mostrare che è un attacco vero e nulla è nascosto.
+Dico: "ho un curl a un URL, punto. Poi per le prossime demo uso uno script che è lo stesso curl, solo colorato di rosso/verde per leggere il risultato al volo."
+Comando a mano (classic, 6661): curl -sG ".../attack/command-injection" --data-urlencode "ip=8.8.8.8;id" → HTTP 200, id gira, uid=0(root).
+Poi contro distroless (6662): stesso curl → HTTP 500, [FAILED] spawn /bin/sh ENOENT.
+Dalla demo 2 in poi uso lo script: ./tests/test-node.sh <target> <attacco> — il colore lo decide dallo status HTTP (RED = riuscito, GREEN = bloccato).
 Battuta: "Distroless 1 - Attaccante 0. Vittoria! ... Fine del talk? Grazie a tutti?"
 Pausa comica, poi: "No. Perché ho appena barato con voi."
 -->
@@ -245,7 +249,7 @@ Poi serio: "Ok, ho letto /etc/passwd. Chi se ne frega. Ora alziamo la posta."
 ```
 ```
 [ATTACK SUCCEEDED - HTTP 200]                       🔴
-eyJhbGciOiJSUzI1NiIsImtpZCI6...
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6...
 ```
 
 Service Account Token → **movimento laterale nel cluster**.

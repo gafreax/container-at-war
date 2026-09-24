@@ -173,12 +173,14 @@ code { font-size: 0.8em; }
 ;background-color:#fff;background-image:none;" data-marpit-pagination-total="31">
 <h2 id="demo--immagine-classica-vs-distroless">Demo — immagine classica vs distroless</h2>
 <p><span class="tag">DEMO Docker</span></p>
-<pre is="marp-pre" data-auto-scaling="downscale-only"><code class="language-bash">./tests/test-node.sh app-classic cmdi
-<span class="hljs-comment">#  -&gt; RED   [ATTACK SUCCEEDED]  comando arbitrario eseguito, uid=0(root)</span>
+<pre is="marp-pre" data-auto-scaling="downscale-only"><code class="language-bash"><span class="hljs-comment"># L&#x27;attacco vero è un curl all&#x27;endpoint vulnerabile (payload: 8.8.8.8;id)</span>
+curl -sG <span class="hljs-string">&quot;http://localhost:6661/attack/command-injection&quot;</span> --data-urlencode <span class="hljs-string">&quot;ip=8.8.8.8;id&quot;</span>
+<span class="hljs-comment">#  -&gt; HTTP 200  ping + id eseguiti → uid=0(root)          <img class="emoji" draggable="false" alt="🔴" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@17.0.3/assets/svg/1f534.svg" data-marp-twemoji=""/>  classic: c&#x27;è /bin/sh</span>
 
-./tests/test-node.sh app-distroless cmdi
-<span class="hljs-comment">#  -&gt; GREEN [ATTACK BLOCKED]    spawn /bin/sh ENOENT (niente shell!)</span>
+curl -sG <span class="hljs-string">&quot;http://localhost:6662/attack/command-injection&quot;</span> --data-urlencode <span class="hljs-string">&quot;ip=8.8.8.8;id&quot;</span>
+<span class="hljs-comment">#  -&gt; HTTP 500  [FAILED] spawn /bin/sh ENOENT             <img class="emoji" draggable="false" alt="🟢" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@17.0.3/assets/svg/1f7e2.svg" data-marp-twemoji=""/>  distroless: niente shell</span>
 </code></pre>
+<p><span class="small">Scorciatoia per le demo successive: <code>./tests/test-node.sh app-classic cmdi</code> — è lo <b>stesso</b> <code>curl</code>, colorato <img class="emoji" draggable="false" alt="🔴" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@17.0.3/assets/svg/1f534.svg" data-marp-twemoji=""/>/<img class="emoji" draggable="false" alt="🟢" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@17.0.3/assets/svg/1f7e2.svg" data-marp-twemoji=""/> in base allo status HTTP.</span></p>
 </section>
 </foreignObject></svg><svg data-marpit-svg="" viewBox="0 0 1280 720"><foreignObject width="1280" height="720"><section id="8" data-class="lead" data-paginate="true" data-background-color="#fff" data-theme="default" data-style="section {
   justify-content: center;
@@ -307,7 +309,7 @@ code { font-size: 0.8em; }
 <pre is="marp-pre" data-auto-scaling="downscale-only"><code class="language-bash">./tests/test-node.sh app-distroless token
 </code></pre>
 <pre is="marp-pre" data-auto-scaling="downscale-only"><code>[ATTACK SUCCEEDED - HTTP 200]                       <img class="emoji" draggable="false" alt="🔴" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@17.0.3/assets/svg/1f534.svg" data-marp-twemoji=""/>
-eyJhbGciOiJSUzI1NiIsImtpZCI6...
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6...
 </code></pre>
 <p>Service Account Token → <strong>movimento laterale nel cluster</strong>.<br />
 Nessuna shell. Solo <code>fs.readFileSync</code>.</p>
@@ -862,11 +864,12 @@ Dì chiaramente: &quot;Se non state usando immagini minimali, iniziate. Fanno be
 Il punto del talk è un altro: risolvono UN problema, non IL problema.&quot;
 Ripeti il claim di marketing: &quot;Il messaggio implicito però è: 'minimale = sicuro'. È lì che caschiamo.&quot;</p></div><div class="bespoke-marp-note" data-index="4" tabindex="0"><p>[4:00 → 4:30] Ponte verso la prima demo. Tono da &quot;mettiamo alla prova il claim&quot;.</p></div><div class="bespoke-marp-note" data-index="5" tabindex="0"><p>[4:30 → 6:00] CODE.
 Commenta: &quot;Classico bug da manuale. Concateno input utente dentro un comando. `exec` di Node NON esegue il binario direttamente: apre `/bin/sh -c '...'`. Tenete a mente questo dettaglio.&quot;
-Payload che mostreremo: ip = 8.8.8.8; ls -la  → su immagine classica esegue anche `ls`.</p></div><div class="bespoke-marp-note" data-index="6" tabindex="0"><p>[6:00 → 8:00] DEMO su Docker (docker-compose up già avviato prima del talk).
-Uso lo script colorato, non curl a mano: ./tests/test-node.sh &lt;target&gt; &lt;attacco&gt;.
-Il colore lo decide lo script dallo status HTTP: RED = attacco riuscito, GREEN = bloccato.
-1. Lancia contro app-classic (6661): banner ROSSO, il comando iniettato (id) gira, nota uid=0(root).
-2. Lancia contro app-distroless (6662): banner VERDE, [FAILED] spawn /bin/sh ENOENT.
+Payload che mostreremo: ip = 8.8.8.8;id  → su immagine classica esegue anche `id` (uid=0(root)).</p></div><div class="bespoke-marp-note" data-index="6" tabindex="0"><p>[6:00 → 8:00] DEMO su Docker (docker-compose up già avviato prima del talk).
+Round 1 lo faccio A MANO col curl, per mostrare che è un attacco vero e nulla è nascosto.
+Dico: &quot;ho un curl a un URL, punto. Poi per le prossime demo uso uno script che è lo stesso curl, solo colorato di rosso/verde per leggere il risultato al volo.&quot;
+Comando a mano (classic, 6661): curl -sG &quot;.../attack/command-injection&quot; --data-urlencode &quot;ip=8.8.8.8;id&quot; → HTTP 200, id gira, uid=0(root).
+Poi contro distroless (6662): stesso curl → HTTP 500, [FAILED] spawn /bin/sh ENOENT.
+Dalla demo 2 in poi uso lo script: ./tests/test-node.sh &lt;target&gt; &lt;attacco&gt; — il colore lo decide dallo status HTTP (RED = riuscito, GREEN = bloccato).
 Battuta: &quot;Distroless 1 - Attaccante 0. Vittoria! ... Fine del talk? Grazie a tutti?&quot;
 Pausa comica, poi: &quot;No. Perché ho appena barato con voi.&quot;</p></div><div class="bespoke-marp-note" data-index="7" tabindex="0"><p>[8:00 → 9:00] Il primo ribaltone concettuale.
 Dì: &quot;Ho scelto apposta un attacco che ha BISOGNO della shell. Ho truccato il match.

@@ -27,3 +27,5 @@ vendor/
 
 # Slide generate (build artifact — si rigenerano con `make slides`)
 slides/slides_v3.pdf
+slides/slides_v4.pdf
+slides/build/
