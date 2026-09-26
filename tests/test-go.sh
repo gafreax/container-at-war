@@ -57,6 +57,8 @@ run() {
 echo -e "${BOLD}=== Fileless attack against '${TARGET}' (port ${PORT}) ===${NC}"
 echo -e "Legend: ${RED}${BOLD}RED = primitive available${NC} | ${GREEN}${BOLD}GREEN = Seccomp blocked${NC}"
 
+# curl equivalent:
+#   curl "http://localhost:${PORT}/attack/fileless-rce"
 run "Fileless RCE primitive  [fileless]  (/attack/fileless-rce)" \
     "Creates an anonymous in-RAM file with memfd_create (the fileless-malware primitive)." \
     "http://localhost:${PORT}/attack/fileless-rce"
