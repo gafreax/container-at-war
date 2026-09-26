@@ -32,7 +32,7 @@ png:
 	@echo "\n[OK] PNG generati in $(PNG_DIR)/"
 
 watch:
-	$(MARP) --html --theme $(THEME) --watch --server $(SRC)
+	$(MARP) --html --theme $(THEME) --watch --server .
 
 clean:
 	rm -f $(PDF_OUT)
