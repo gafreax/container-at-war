@@ -445,20 +445,21 @@ senza mai toccare /bin/sh."
 
 <div class="term" data-title="app-distroless · :6662">
 <div class="term-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="term-label">app-distroless · :6662</span><span class="pill red">RIUSCITO</span></div>
-<pre class="term-out"><span class="cmd">./tests/test-node.sh app-distroless eval</span><span class="fail">[ATTACK SUCCEEDED - HTTP 200]</span>
-RCE result: 2</pre>
+<pre class="term-out"><span class="cmd">curl ".../attack/eval-rce?code=1%2B1"</span><span class="fail">HTTP 200</span> — RCE result: 2   <span class="hi">← valuta JS</span>
+<span class="cmd">curl ".../attack/eval-rce?code=process.env"</span><span class="fail">HTTP 200</span> — { PATH:..., <span class="hi">TOKEN, SECRET...</span> }</pre>
 </div>
 
-Payload dello script: `code=1+1` — banale apposta, per essere ripetibile sul palco.
-Ma è la STESSA strada di `require('fs').readFileSync(token)`.
-RCE reale su **distroless**. Zero shell coinvolte.
+Escala da `1+1` (valuta) a `process.env` (**dumpa i secret**). Zero shell: è il **runtime** stesso.
+Stessa strada di `require('fs').readFileSync(token)`. RCE reale su **distroless**.
 
 <!--
-[18:00 → 19:30] DEMO (distroless). Comando: ./tests/test-node.sh app-distroless eval.
-Questa è la demo RCE più solida: dipende solo dal runtime Node, non dal kernel della VM.
-Lo script manda un payload innocuo (1+1) per essere sicuro e ripetibile live, ma sottolinea a voce:
-"eval esegue QUALSIASI JS. Lo stesso `eval` potrebbe fare require('fs').readFileSync sul token che avete visto prima."
-Takeaway forte: "Distroless toglie la SHELL. Non toglie il RUNTIME. E il runtime, per un interprete, è tutto ciò che serve."
+[18:00 → 19:30] DEMO (distroless). Due tempi, ripetibile e sicuro:
+1) ./tests/test-node.sh app-distroless eval  → code=1+1 → "RCE result: 2". "Vedete? eval VALUTA quello che gli mando."
+2) ESCALA live: ./tests/test-node.sh app-distroless eval-env  → code=process.env → dumpa TUTTE le variabili d'ambiente
+   (spesso piene di secret/API key). "Payload JS puro, nessuna shell: non mi serve /bin/sh, mi serve il vostro interprete."
+NOTA: NON usare payload shell (child_process.execSync('id')) → su distroless fallirebbe (niente /bin/sh); ed è proprio il punto:
+eval non HA bisogno della shell. Payload JS puri: process.env, require('fs').readFileSync(token).
+Takeaway: "Distroless toglie la SHELL. Non toglie il RUNTIME. Per un interprete, il runtime è tutto ciò che serve."
 Ripeti la tesi: «Più sicuro» non vuol dire «sicuro».
 -->
 
@@ -630,7 +631,29 @@ Man-in-the-loop, sempre. È esattamente la stessa filosofia che vedremo tra poco
 - `readOnlyRootFilesystem` → blocca le **scritture**. L'LFI è una **lettura**.
 - `runAsNonRoot` → utile, ma `/etc/passwd` è world-readable: non basta per questo caso.
 
-> Ogni feature difende da **una** minaccia. Non da *tutte*.
+<div class="cols">
+<div>
+
+**Kubernetes** — `securityContext`
+```yaml
+securityContext:
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+```
+
+</div>
+<div>
+
+**Docker / compose** — a runtime
+```yaml
+read_only: true
+user: "1000"
+```
+
+</div>
+</div>
+
+> Si applicano a **runtime**, non nel Dockerfile. E ogni feature difende da **una** minaccia, non da *tutte*.
 
 <!--
 [24:30 → 25:15]
@@ -1194,8 +1217,7 @@ Seconda metà dei riferimenti, spostata qui per non affollare la slide precedent
 
 <span class="small">Le slide e il codice della demo sono nel repo.</span>
 
-<!-- IMMAGINE DI CHIUSURA: pinguino (Tux) che picchia col battipanni il logo Claude umanizzato che scappa.
-     Genera con nano-banana/Gemini (prompt in notes/frasi-speaker.md §4) e inserisci qui come <img>. -->
+<img src="Gemini_Generated_Image_64pf3d64pf3d64pf.jpeg" alt="Tux insegue la mascotte AI col battipanni" style="display:block; margin:20px auto 0; height:300px; mix-blend-mode:multiply;" />
 
 <!--
 [43:30 → 45:00+] Q&A.
