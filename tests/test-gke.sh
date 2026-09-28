@@ -96,5 +96,4 @@ for name in "${SELECTION[@]}"; do
   esac
 done
 
-echo -e "\n${DIM}(il token SA è un JWT reale: decodificalo su jwt.io)${NC}"
 echo ""
