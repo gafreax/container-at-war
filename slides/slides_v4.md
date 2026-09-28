@@ -392,26 +392,27 @@ Stacci dentro con calma: è il cuore dell'ATTO 2.
 
 ---
 
-## «E su Kubernetes?»
+## «E su Kubernetes?» — **live su GKE**
 
-<span class="tag k8s">K8s · mostrato, non eseguito</span>
+<span class="tag demo">DEMO · GKE</span> Stesso attacco, cluster vero
 
-```yaml
-# k8s/node-pods.yaml  (estratto)
-spec:
-  containers:
-  - name: app
-    image: demo-node-lfi:latest
-```
+<div class="term" data-title="demo-node @ GKE · :6662">
+<div class="term-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="term-label">demo-node @ GKE · :6662</span><span class="pill red">RIUSCITO</span></div>
+<pre class="term-out"><span class="cmd">./tests/test-gke.sh satoken</span><span class="fail">[satoken] ATTACK SUCCEEDED - HTTP 200</span>
+eyJhbGciOiJSUzI1NiIsImtpZCI6Il9k... <span class="hi">← token del ServiceAccount VERO</span>
+<span class="dim">iss: kubernetes/serviceaccount · exp: ... · sub: system:serviceaccount:default:demo-node</span></pre>
+</div>
 
-Lo stesso identico attacco. Cambia solo *dove* gira il pod.
-Il token è montato in `/var/run/secrets/...` **da Kubernetes stesso**.
+Nessun mock: il token lo monta **Kubernetes stesso** in `/var/run/secrets/...`, di default, in **ogni** pod.
+Stesso identico attacco — cambia solo *dove* gira il pod.
 
 <!--
-[15:30 → 16:30] K8s NOMINATO.
-Non eseguire nulla: mostra il manifest a schermo.
-"Ho fatto la demo su Docker per semplicità, ma in un cluster è identico — anzi, è PEGGIO,
-perché è Kubernetes a montare quel token nel filesystem del pod, di default, in ogni pod."
+[15:30 → 16:30] K8s ESEGUITO DAVVERO, live su GKE.
+Prima: "La demo di prima era su Docker, con un token che montavo io. Ora lo faccio sul cluster vero."
+Lancia: ./tests/test-gke.sh satoken (port-forward gestito dallo script).
+IL PUNTO: "Questo token NON l'ho messo io — lo proietta Kubernetes stesso, di default, in OGNI pod.
+Da un bug in UNA app leggo il token del ServiceAccount e parlo con l'API server."
+Se il cluster è spento/lento: fallback → mostra k8s/node-pods.yaml e racconta il meccanismo.
 Aggancio: "Quindi il managed mi salva? Ci arriviamo tra poco. Prima, il colpo di grazia."
 -->
 
@@ -549,6 +550,26 @@ deny /etc/shadow mrw,
 deny /var/run/secrets/kubernetes.io/serviceaccount/** mrw,
 ```
 
+<span class="small">**Come si applica** → carica il profilo nel kernel dell'host, poi attaccalo al container:</span>
+
+```bash
+sudo apparmor_parser -r -W k8s/security/apparmor-node-profile  
+docker run --security-opt apparmor=docker-node-hardened ...   
+```
+
+<span class="small">K8s (≥1.30): `securityContext.appArmorProfile: {type: Localhost, localhostProfile: docker-node-hardened}`</span>
+
+<!--
+[21:00 → 21:30] Slide-codice. Mostra l'estratto del profilo: tre deny su passwd, shadow e token del service account.
+"Si applica in due passi: carico il profilo nel kernel dell'host, poi lo attacco al container."
+K8s: "Su Kubernetes stesso profilo, via securityContext.appArmorProfile (da 1.30)." — mostra riga, non eseguire.
+Poi vai alla demo.
+-->
+
+---
+
+## Demo — AppArmor blocca l'LFI
+
 <span class="tag demo">DEMO · Docker</span> Ritento l'LFI sul container *hardened*
 
 <div class="term" data-title="app-distroless-hardened · :6663">
@@ -560,11 +581,10 @@ Read error: EACCES</pre>
 <span class="small">Nota onesta: qui uso una blacklist per didattica. In produzione → allowlist (vedi slide dopo).</span>
 
 <!--
-[21:00 → 22:30] DEMO su Docker (container app-distroless-hardened, porta 6663, con security_opt apparmor).
+[21:30 → 22:30] DEMO su Docker (container app-distroless-hardened, porta 6663, con security_opt apparmor).
 Comando: ./tests/test-node.sh app-distroless-hardened passwd token — rilancia le stesse due LFI di prima, ora contro 6663.
 Entrambe tornano VERDI: "Read error: EACCES". "Il kernel dell'host ha intercettato la readFileSync di Node PRIMA che leggesse il file."
 Onestà: "Sto usando una blacklist — 'nega questi file'. È fragile: dimentichi un file e sei fregato. Tra un attimo vi mostro esattamente cosa succede quando dimentichi."
-K8s: "Su Kubernetes stesso profilo, via securityContext.appArmorProfile (da 1.30)." — mostra riga, non eseguire.
 
 ZERO TRUST (se qualcuno lo chiede / se vuoi agganciarlo): questo è il PRINCIPIO del least privilege / default-deny,
 lo stesso che sta ALLA BASE dello zero trust. Dì "è lo stesso principio dello zero trust", NON "AppArmor è zero trust":
@@ -689,6 +709,12 @@ Non sono inutili — difendono da ALTRO. Ma metterle in check e sentirsi al sicu
 // k8s/security/seccomp-go.json (estratto)
 { "defaultAction": "SCMP_ACT_ALLOW",
   "syscalls": [{ "names": ["memfd_create"], "action": "SCMP_ACT_ERRNO" }] }
+```
+
+<span class="small">**Come si applica** → il runtime legge il JSON direttamente, nessun caricamento nel kernel:</span>
+
+```bash
+docker run --security-opt seccomp=./k8s/security/seccomp-go.json ... 
 ```
 
 Difesa al **layer giusto**: AppArmor sui file, Seccomp sulle **syscall**.
