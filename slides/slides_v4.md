@@ -1241,9 +1241,13 @@ Seconda metà dei riferimenti, spostata qui per non affollare la slide precedent
 ## Grazie!
 # Domande?
 
-<span class="small">Le slide e il codice della demo sono nel repo.</span>
-
-<img src="Gemini_Generated_Image_64pf3d64pf3d64pf.jpeg" alt="Tux insegue la mascotte AI col battipanni" style="display:block; margin:20px auto 0; height:300px; mix-blend-mode:multiply;" />
+<div style="display:flex; align-items:center; justify-content:center; gap:48px; margin-top:20px;">
+<img src="Gemini_Generated_Image_64pf3d64pf3d64pf.jpeg" alt="Tux insegue la mascotte AI col battipanni" style="height:300px; mix-blend-mode:multiply;" />
+<div style="text-align:center;">
+<img src="qr-links.png" alt="QR code verso gafreax.github.io/#links" style="height:220px; image-rendering:pixelated;" /><br>
+<span class="small">Slide, demo, script e link<br><code>gafreax.github.io/#links</code></span>
+</div>
+</div>
 
 <!--
 [43:30 → 45:00+] Q&A.
